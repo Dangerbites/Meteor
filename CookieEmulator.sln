@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CookieEmulator", "CookieEmulator.csproj", "{D68DD248-F4B3-446D-A5D1-797BA991A74E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CookieEmulator", "CookieEmulator.csproj", "{1D38CD8C-BBCB-4BD1-A470-991F14738471}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,11 +9,11 @@ Global
 	ExportRelease|Any CPU = ExportRelease|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D68DD248-F4B3-446D-A5D1-797BA991A74E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D68DD248-F4B3-446D-A5D1-797BA991A74E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D68DD248-F4B3-446D-A5D1-797BA991A74E}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
-		{D68DD248-F4B3-446D-A5D1-797BA991A74E}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
-		{D68DD248-F4B3-446D-A5D1-797BA991A74E}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
-		{D68DD248-F4B3-446D-A5D1-797BA991A74E}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{1D38CD8C-BBCB-4BD1-A470-991F14738471}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D38CD8C-BBCB-4BD1-A470-991F14738471}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D38CD8C-BBCB-4BD1-A470-991F14738471}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{1D38CD8C-BBCB-4BD1-A470-991F14738471}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{1D38CD8C-BBCB-4BD1-A470-991F14738471}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{1D38CD8C-BBCB-4BD1-A470-991F14738471}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
 	EndGlobalSection
 EndGlobal

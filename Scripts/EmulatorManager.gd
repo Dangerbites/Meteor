@@ -19,6 +19,9 @@ var debug_move_speed : float = 500
 var converter_pid: int = -1
 var expected_output_path: String = ""
 
+var recent_projects = []
+signal project_loaded(tap_path)
+
 func _ready() -> void:
 	ensure_hyperpad_convert_in_user_folder()
 
@@ -35,6 +38,13 @@ func _on_files_dropped(files: PackedStringArray):
 			break
 
 func _run_converter(tap_path: String):
+	if not recent_projects.has(tap_path): # Add tap path to recent projects if it dosent have, and limit it to 5 values.
+		recent_projects.push_front(tap_path)
+	if len(recent_projects) > 5:
+		recent_projects.pop_back()
+	project_loaded.emit(tap_path)
+	print("STUPID PATH: ", tap_path)
+	
 	var progress_ui = get_tree().current_scene.get_node("ProgressUI")
 	progress_ui.set_progress("Converting sqlite data to JSON...", 69)
 

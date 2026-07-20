@@ -1,13 +1,120 @@
 [gd_scene format=3 uid="uid://c0nqedjsprihf"]
 
 [ext_resource type="Texture2D" uid="uid://bg3qj2gh35vmm" path="res://Screenshot 2026-07-18 062229.png" id="1_o5qli"]
+[ext_resource type="FontFile" uid="uid://cn6bqbsl0rvut" path="res://helvetica-255/Helvetica.ttf" id="1_o6xl0"]
+[ext_resource type="Script" uid="uid://r6vat21xit0u" path="res://scripts/gay_ui.gd" id="1_tipki"]
 [ext_resource type="Texture2D" uid="uid://cn3wds4rajx1x" path="res://icon.svg" id="2_0wfyh"]
 [ext_resource type="Texture2D" uid="uid://bvqvkn2wppnu4" path="res://IMG_0276.png" id="2_sugp2"]
 [ext_resource type="Texture2D" uid="uid://wdetqhxm57cd" path="res://image.png" id="4_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://cd5ei1i4xugop" path="res://objects/ProgressUI.tscn" id="5_tbgi4"]
 [ext_resource type="Texture2D" uid="uid://fo7w3n2gn08p" path="res://ipad.png" id="6_tefeu"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85g3d"]
+content_margin_left = 32.0
+content_margin_top = 8.0
+content_margin_right = 32.0
+content_margin_bottom = 7.0
+bg_color = Color(0.12156863, 0.12156863, 0.12156863, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_choun"]
+content_margin_left = 32.0
+content_margin_top = 8.0
+content_margin_right = 32.0
+content_margin_bottom = 7.0
+bg_color = Color(0.060530342, 0.06053035, 0.060530327, 1)
+
+[sub_resource type="Theme" id="Theme_o6xl0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o6xl0"]
+content_margin_left = 6.0
+content_margin_top = 5.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.05882353, 0.05882353, 0.05882353, 1)
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.2, 0.2, 0.2, 1)
+border_blend = true
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tipki"]
+bg_color = Color(0.12225223, 0.12225225, 0.12225217, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="MAIN" type="Node2D" unique_id=1002170495]
+
+[node name="GayUI" type="CanvasLayer" parent="." unique_id=739012972]
+script = ExtResource("1_tipki")
+
+[node name="MenuBar" type="MenuBar" parent="GayUI" unique_id=1819804342]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 32.0
+grow_horizontal = 2
+theme_override_constants/h_separation = 0
+theme_override_fonts/font = ExtResource("1_o6xl0")
+theme_override_styles/normal = SubResource("StyleBoxFlat_85g3d")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_85g3d")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_85g3d")
+theme_override_styles/hover = SubResource("StyleBoxFlat_choun")
+
+[node name="PopupMenu" type="PopupMenu" parent="GayUI/MenuBar" unique_id=2038768213]
+oversampling_override = 1.0
+title = "File"
+size = Vector2i(410, 91)
+visible = true
+theme = SubResource("Theme_o6xl0")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_accelerator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/v_separation = 12
+theme_override_fonts/font = ExtResource("1_o6xl0")
+theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_separator_size = 5
+theme_override_styles/panel = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/hover = SubResource("StyleBoxFlat_tipki")
+theme_override_styles/separator = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_left = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_right = SubResource("StyleBoxFlat_o6xl0")
+
+[node name="PopupMenu" type="PopupMenu" parent="GayUI/MenuBar/PopupMenu" unique_id=1955363694]
+oversampling_override = 1.0
+title = "File"
+size = Vector2i(410, 91)
+visible = true
+theme = SubResource("Theme_o6xl0")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_accelerator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/v_separation = 12
+theme_override_fonts/font = ExtResource("1_o6xl0")
+theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_separator_size = 5
+theme_override_styles/panel = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/hover = SubResource("StyleBoxFlat_tipki")
+theme_override_styles/separator = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_left = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_right = SubResource("StyleBoxFlat_o6xl0")
+
+[node name="OpenTapFileDialog" type="FileDialog" parent="GayUI" unique_id=474783667]
+title = "Open a File"
+file_mode = 0
+access = 2
+use_native_dialog = true
 
 [node name="Image" type="Sprite2D" parent="." unique_id=1967114624]
 visible = false
@@ -55,3 +162,7 @@ visible = false
 position = Vector2(509, 397)
 scale = Vector2(1.1984587, 1.1984586)
 texture = ExtResource("6_tefeu")
+
+[connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu" to="GayUI" method="_on_file_menu_id_pressed"]
+[connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu/PopupMenu" to="GayUI" method="_recent_project_id_pressed"]
+[connection signal="file_selected" from="GayUI/OpenTapFileDialog" to="GayUI" method="_on_open_tap_file_dialog_file_selected"]
