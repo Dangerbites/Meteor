@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bdj87m3v6iean"]
+
+[ext_resource type="Script" uid="uid://cxq31qme74omi" path="res://Scripts/Components/behavior_interpreter.gd" id="1_aes08"]
+
+[node name="BehaviorInterpreter" type="Node" unique_id=740618950]
+script = ExtResource("1_aes08")

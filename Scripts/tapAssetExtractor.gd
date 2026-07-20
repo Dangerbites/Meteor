@@ -295,7 +295,10 @@ func _on_extraction_finished(result: Dictionary) -> void:
 
 
 ## Convenience helper – unchanged.
-func get_asset_user_path(asset_path: String) -> String:
+func get_asset_user_path(asset_path) -> String:
+	if not (asset_path is String):
+		push_error("get_asset_user_path: Expected a non-null String, got: %s" % asset_path)
+		return ""   # fallback – adjust as needed
 	var sanitized_dir := sanitize_asset_path(asset_path)
 	var base_name := sanitize_path_segment(asset_path.get_file())
 	return OUTPUT_ROOT.path_join(sanitized_dir).path_join(base_name + ".png")

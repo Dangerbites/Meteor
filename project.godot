@@ -13,6 +13,7 @@ config_version=5
 config/name="CookieEmulator"
 run/main_scene="uid://c0nqedjsprihf"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+run/max_fps=60
 boot_splash/stretch_mode=3
 boot_splash/image="uid://cemeji6cwjbkw"
 config/icon="res://logo.png"

@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_1dato"]
 [ext_resource type="Script" uid="uid://dt24bf563pt6m" path="res://Scripts/Components/graphicComponent.gd" id="2_drlfl"]
 [ext_resource type="Texture2D" uid="uid://cn3wds4rajx1x" path="res://icon.svg" id="2_y48sq"]
+[ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="4_8skcp"]
 
 [node name="GraphicObject" type="Node2D" unique_id=1268174134 groups=["HyperpadObject"]]
 script = ExtResource("1_1dato")
@@ -11,3 +12,5 @@ script = ExtResource("1_1dato")
 scale = Vector2(0.49999997, 0.50000006)
 texture = ExtResource("2_y48sq")
 script = ExtResource("2_drlfl")
+
+[node name="BehaviorInterpreter" parent="." unique_id=740618950 instance=ExtResource("4_8skcp")]

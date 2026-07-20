@@ -1,5 +1,7 @@
 extends Node
 
+signal finished_loading_level
+
 # HYPERPAD OBJECT TYPES
 var EmptyObjectScene : PackedScene = preload("res://objects/EmptyObject.tscn")
 var GraphicObjectScene : PackedScene = preload("res://objects/graphic_object.tscn")
@@ -29,6 +31,7 @@ func _ready() -> void:
 
 	#console commands
 	Console.add_command("loadScene", load_scene, ["Scene Name"])
+	Console.add_command("getSceneNames", get_scene_names,)
 
 func _on_files_dropped(files: PackedStringArray):
 	for file_path in files:
@@ -92,21 +95,6 @@ func _process(_delta):
 	if Input.is_action_just_pressed("open_user_folder"):
 		var user_path = ProjectSettings.globalize_path("user://")
 		OS.shell_open(user_path)
-
-	return
-
-	if Input.is_action_pressed("arrow_down"):
-		for node in get_tree().get_nodes_in_group("HyperpadObject"):
-			node.global_position.y -= _delta * debug_move_speed
-	if Input.is_action_pressed("arrow_up"):
-		for node in get_tree().get_nodes_in_group("HyperpadObject"):
-			node.global_position.y += _delta * debug_move_speed
-	if Input.is_action_pressed("arrow_left"):
-		for node in get_tree().get_nodes_in_group("HyperpadObject"):
-			node.global_position.x += _delta * debug_move_speed
-	if Input.is_action_pressed("arrow_right"):
-		for node in get_tree().get_nodes_in_group("HyperpadObject"):
-			node.global_position.x -= _delta * debug_move_speed
 
 func start_emulating():
 	if get_tree().current_scene.get_node("ipad"):
@@ -188,7 +176,14 @@ func load_scene(_scene : String = main_scene_name):
 
 	_layer_nodes.clear()
 
-	var objects = project_json_parsed["Objects"][_scene]
+	var objects
+	var objects_dict = project_json_parsed["Objects"]
+
+	if objects_dict.has(_scene):
+		objects = objects_dict[_scene]
+	else:
+		objects = objects_dict.get("null", {})  # provide a fallback default if "null" might also be missing
+	
 	var SceneSettings = project_json_parsed["SceneSettings"][_scene]
 	var Layers = project_json_parsed["Layers"]
 
@@ -243,6 +238,7 @@ func load_scene(_scene : String = main_scene_name):
 		clone.id = i
 		layer_container.add_child(clone)
 
+	finished_loading_level.emit()
 			
 func delete_directory_recursive(path: String) -> bool:
 	var dir := DirAccess.open(path)
@@ -304,3 +300,10 @@ func ensure_hyperpad_convert_in_user_folder() -> void:
 	target_file.store_string(content)
 	target_file.close()
 	print("Copied hyperpad_convert3.py to user folder.")
+
+# -------------------------
+# DEVELOPER CONSOLE FUNCTIONS
+
+func get_scene_names() -> void:
+	for i in project_json_parsed["Scenes"]:
+		Console.print_line(i["name"])
