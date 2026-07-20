@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://bwgnhkenyg6dy"]
+
+[ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_yp6bn"]
+[ext_resource type="Script" uid="uid://bifjktb11qkhj" path="res://Scripts/TTFlabel.gd" id="2_b1002"]
+
+[node name="TTFLabelObject" type="Node2D" unique_id=1918359615]
+script = ExtResource("1_yp6bn")
+
+[node name="Label" type="RichTextLabel" parent="." unique_id=2020233717]
+offset_left = -27.0
+offset_top = -12.0
+offset_right = 27.0
+offset_bottom = 11.0
+text = "EMPTY"
+horizontal_alignment = 1
+script = ExtResource("2_b1002")

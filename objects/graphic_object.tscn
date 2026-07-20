@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://dca060aed83cw"]
+
+[ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_1dato"]
+[ext_resource type="Script" uid="uid://dt24bf563pt6m" path="res://Scripts/Components/graphicComponent.gd" id="2_drlfl"]
+[ext_resource type="Texture2D" uid="uid://cn3wds4rajx1x" path="res://icon.svg" id="2_y48sq"]
+
+[node name="GraphicObject" type="Node2D" unique_id=1268174134 groups=["HyperpadObject"]]
+script = ExtResource("1_1dato")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=2121270780]
+scale = Vector2(0.49999997, 0.50000006)
+texture = ExtResource("2_y48sq")
+script = ExtResource("2_drlfl")

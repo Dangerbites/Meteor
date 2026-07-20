@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://35ath4xem0vi"]
+
+[ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_sv5so"]
+[ext_resource type="Script" uid="uid://bviyv8qikyjod" path="res://Scripts/life.gd" id="2_50gdn"]
+
+[node name="LifeIndicatorObject" type="Node2D" unique_id=1662510795]
+script = ExtResource("1_sv5so")
+
+[node name="life" type="Node2D" parent="." unique_id=144623750]
+script = ExtResource("2_50gdn")

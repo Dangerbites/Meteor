@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://0u3dc5xtcaa7"]
+
+[ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_v7pq7"]
+[ext_resource type="Script" uid="uid://cr5e14dley2wa" path="res://Scripts/joystick.gd" id="2_nlt62"]
+
+[node name="JoystickObject" type="Node2D" unique_id=688248039]
+script = ExtResource("1_v7pq7")
+
+[node name="VirtualJoystick" type="VirtualJoystick" parent="." unique_id=401265551]
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+joystick_size = 181.0
+tip_size = 62.0
+script = ExtResource("2_nlt62")

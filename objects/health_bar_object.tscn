@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://devf2bepwlkjf"]
+
+[ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_cw2il"]
+[ext_resource type="Texture2D" uid="uid://bv3gl28566k5b" path="res://Green Square Container.png" id="2_d8wih"]
+[ext_resource type="Texture2D" uid="uid://cn3wds4rajx1x" path="res://icon.svg" id="2_kroe0"]
+[ext_resource type="Script" uid="uid://mibctcp8yrbm" path="res://Scripts/texture_progress_bar.gd" id="3_asshg"]
+
+[node name="HealthBarObject" type="Node2D" unique_id=861826000]
+script = ExtResource("1_cw2il")
+
+[node name="TextureProgressBar" type="TextureProgressBar" parent="." unique_id=132603976]
+offset_right = 128.0
+offset_bottom = 128.0
+texture_under = ExtResource("2_d8wih")
+texture_progress = ExtResource("2_kroe0")
+script = ExtResource("3_asshg")
