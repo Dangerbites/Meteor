@@ -43,7 +43,6 @@ func _run_converter(tap_path: String):
 	if len(recent_projects) > 5:
 		recent_projects.pop_back()
 	project_loaded.emit(tap_path)
-	print("STUPID PATH: ", tap_path)
 	
 	var progress_ui = get_tree().current_scene.get_node("ProgressUI")
 	progress_ui.set_progress("Converting sqlite data to JSON...", 69)
