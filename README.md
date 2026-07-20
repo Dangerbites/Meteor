@@ -99,6 +99,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Modify Save File
   - [ ] Modify Tags
   - [ ] Mouse Event
+  - [x] Move By
   - [ ] Noise Map
   - [ ] Open URL
   - [ ] Post to Facebook
