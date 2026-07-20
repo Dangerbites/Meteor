@@ -63,7 +63,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Emit to Socket
   - [ ] Execute Behaviour
   - [ ] Execute Sequence
-  - [ ] Frame Event
+  - [x] Frame Event
+    - Unsure, should check bugs for it
   - [ ] Get Array Count
   - [ ] Get Array Value
   - [ ] Get Background
