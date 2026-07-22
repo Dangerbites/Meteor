@@ -1,8 +1,15 @@
 [gd_scene format=3 uid="uid://dyxqbeaqvdkkn"]
 
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_48q7h"]
+[ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="2_ml7pp"]
+[ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="3_hwmqh"]
 
-[node name="EmptyObject" type="Node2D" unique_id=953551984]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
+size = Vector2(70, 70)
+
+[node name="EmptyObject" type="RigidBody2D" unique_id=127268787 groups=["HyperpadObject"]]
+input_pickable = true
+freeze = true
 script = ExtResource("1_48q7h")
 
 [node name="ColorRect" type="ColorRect" parent="." unique_id=256985946]
@@ -10,3 +17,11 @@ offset_left = -35.0
 offset_top = -35.0
 offset_right = 35.0
 offset_bottom = 35.0
+mouse_filter = 2
+
+[node name="BehaviorInterpreter" parent="." unique_id=740618950 instance=ExtResource("2_ml7pp")]
+
+[node name="touchingComponent" parent="." unique_id=1357324686 instance=ExtResource("3_hwmqh")]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=302168465]
+shape = SubResource("RectangleShape2D_plwxy")

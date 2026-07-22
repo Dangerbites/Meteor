@@ -478,12 +478,14 @@ class HyperPadProject:
                 continue
 
             actions = self._decode_blob(b["ZACTIONS"])
+            groups = self._decode_blob(b.get("ZGROUPS")) if b.get("ZGROUPS") else []
 
             entry = {
                 "actions": actions,
                 "root": b["ZISROOT"],
                 "name": b["ZNAME"],
                 "tag": b["ZTAG"],
+                "groups": groups,  # <-- NEW: tag/group names this behavior belongs to
                 "position": (b["ZX_POS"], b["ZY_POS"]),
             }
             organised.setdefault(owner["ZUNIQUEID"], []).append(entry)

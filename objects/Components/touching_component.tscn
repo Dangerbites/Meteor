@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://hxrssf1kx1xa"]
+
+[ext_resource type="Script" uid="uid://uhl0aey3wbwx" path="res://Scripts/Components/touching_component.gd" id="1_vi2k1"]
+
+[node name="touchingComponent" type="Node" unique_id=1357324686]
+script = ExtResource("1_vi2k1")

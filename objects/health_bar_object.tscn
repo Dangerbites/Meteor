@@ -5,7 +5,10 @@
 [ext_resource type="Texture2D" uid="uid://cn3wds4rajx1x" path="res://icon.svg" id="2_kroe0"]
 [ext_resource type="Script" uid="uid://mibctcp8yrbm" path="res://Scripts/texture_progress_bar.gd" id="3_asshg"]
 
-[node name="HealthBarObject" type="Node2D" unique_id=861826000]
+[sub_resource type="CircleShape2D" id="CircleShape2D_d8wih"]
+
+[node name="HealthBarObject" type="RigidBody2D" unique_id=156611529]
+freeze = true
 script = ExtResource("1_cw2il")
 
 [node name="TextureProgressBar" type="TextureProgressBar" parent="." unique_id=132603976]
@@ -14,3 +17,6 @@ offset_bottom = 128.0
 texture_under = ExtResource("2_d8wih")
 texture_progress = ExtResource("2_kroe0")
 script = ExtResource("3_asshg")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1800932831]
+shape = SubResource("CircleShape2D_d8wih")

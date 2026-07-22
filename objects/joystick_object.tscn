@@ -3,7 +3,10 @@
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_v7pq7"]
 [ext_resource type="Script" uid="uid://cr5e14dley2wa" path="res://Scripts/joystick.gd" id="2_nlt62"]
 
-[node name="JoystickObject" type="Node2D" unique_id=688248039]
+[sub_resource type="CircleShape2D" id="CircleShape2D_plwxy"]
+
+[node name="JoystickObject" type="RigidBody2D" unique_id=1883234216]
+freeze = true
 script = ExtResource("1_v7pq7")
 
 [node name="VirtualJoystick" type="VirtualJoystick" parent="." unique_id=401265551]
@@ -14,3 +17,6 @@ offset_bottom = 20.0
 joystick_size = 181.0
 tip_size = 62.0
 script = ExtResource("2_nlt62")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=810116966]
+shape = SubResource("CircleShape2D_plwxy")

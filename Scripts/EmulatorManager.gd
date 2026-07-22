@@ -233,10 +233,18 @@ func load_scene(_scene : String = main_scene_name):
 				clone = LifeIndicatorObject.instantiate() as Node2D
 			_:
 				continue
+				
+		if objects[i].get("gameobjectdata", null): # adding tags to object as godot's "group"
+			var tags_array = objects[i]["gameobjectdata"].get("tags", [])
+			if tags_array != []:
+				for tag in tags_array:
+					clone.add_to_group(tag)
 
 		clone.object_data = objects[i]
 		clone.id = i
 		layer_container.add_child(clone)
+
+
 
 	finished_loading_level.emit()
 			

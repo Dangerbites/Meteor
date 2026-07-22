@@ -1,6 +1,8 @@
 extends Sprite2D
 var object_data
 
+@export var collision : CollisionShape2D
+
 func _ready() -> void:
 	object_data = get_parent().object_data
 	var asset_path = object_data["asset_path"]
@@ -32,13 +34,17 @@ func apply_anchor_offset() -> void:
 	var anchor = Vector2(object_data["anchor"][0], object_data["anchor"][1])
 	var tex_size = texture.get_size()
 
-	# anchor.x: cocos2d and Godot both run left-to-right, no flip needed.
-	# anchor.y: cocos2d is bottom-up (0 = bottom of texture), Godot's
-	# texture-fraction space is top-down (0 = top), so it's (1 - anchor.y)
-	# in Godot terms. This shifts FROM Godot's default center (0.5, 0.5)
-	# TO the real anchor point, in raw texture pixels (unscaled - the
-	# node's transform applies scale/rotation to this automatically).
-	offset = Vector2(
+	var target_offset = Vector2(
 		tex_size.x * (0.5 - anchor.x),
 		tex_size.y * (anchor.y - 0.5)
 	)
+
+	position = target_offset * scale
+
+	# Duplicate the shape so we don't affect other instances that share it
+	var new_shape = collision.shape.duplicate(true)
+	collision.shape = new_shape
+	collision.shape.size = tex_size * scale
+
+	# position can stay as is – it’s a node property, not shared
+	collision.position = position

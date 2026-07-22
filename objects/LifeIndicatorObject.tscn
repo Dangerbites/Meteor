@@ -3,8 +3,14 @@
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_sv5so"]
 [ext_resource type="Script" uid="uid://bviyv8qikyjod" path="res://Scripts/life.gd" id="2_50gdn"]
 
-[node name="LifeIndicatorObject" type="Node2D" unique_id=1662510795]
+[sub_resource type="CircleShape2D" id="CircleShape2D_5n3on"]
+
+[node name="LifeIndicatorObject" type="RigidBody2D" unique_id=175581122]
+freeze = true
 script = ExtResource("1_sv5so")
 
 [node name="life" type="Node2D" parent="." unique_id=144623750]
 script = ExtResource("2_50gdn")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=145158230]
+shape = SubResource("CircleShape2D_5n3on")

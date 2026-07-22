@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://b73pvungc6eqh"]
+
+[ext_resource type="Script" uid="uid://b13f8bg2y3o5q" path="res://Scripts/debug_ui.gd" id="1_3ijkq"]
+[ext_resource type="FontFile" uid="uid://cn6bqbsl0rvut" path="res://helvetica-255/Helvetica.ttf" id="1_j66th"]
+
+[node name="DebugUI" type="CanvasLayer" unique_id=1682261412]
+script = ExtResource("1_3ijkq")
+
+[node name="FPS_label" type="RichTextLabel" parent="." unique_id=16141893]
+unique_name_in_owner = true
+offset_left = 3.0
+offset_top = 698.0
+offset_right = 937.0
+offset_bottom = 715.0
+mouse_filter = 2
+theme_override_fonts/normal_font = ExtResource("1_j66th")
+text = "FPS : 0"

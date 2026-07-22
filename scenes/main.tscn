@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://wdetqhxm57cd" path="res://image.png" id="4_jyhfs"]
 [ext_resource type="PackedScene" uid="uid://cd5ei1i4xugop" path="res://objects/ProgressUI.tscn" id="5_tbgi4"]
 [ext_resource type="Texture2D" uid="uid://fo7w3n2gn08p" path="res://ipad.png" id="6_tefeu"]
+[ext_resource type="PackedScene" uid="uid://b73pvungc6eqh" path="res://objects/debug_ui.tscn" id="9_85g3d"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85g3d"]
 content_margin_left = 32.0
@@ -162,6 +163,8 @@ title = "Open a File"
 file_mode = 0
 access = 2
 use_native_dialog = true
+
+[node name="DebugUI" parent="." unique_id=1682261412 instance=ExtResource("9_85g3d")]
 
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu" to="GayUI" method="_on_file_menu_id_pressed"]
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu/PopupMenu" to="GayUI" method="_recent_project_id_pressed"]

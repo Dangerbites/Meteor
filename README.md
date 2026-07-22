@@ -35,6 +35,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
     - [x] z-order
     - [x] normal layers
     - [x] UI layers
+- [x] tags
+- [x] collision shapes
 - [ ] Behaviors
   - [ ] Array
   - [ ] Authenticate OAuth
@@ -89,6 +91,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Keyboard Shortcut
   - [ ] Load Image
   - [ ] Load Scene
+    - [] Transitions
+     - [x] none 
   - [ ] Load from File
   - [ ] Loop
   - [ ] Math Expression
@@ -127,17 +131,18 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Sort Array
   - [ ] Sort by Distance
   - [ ] Start Trail
+  - [x] Started Touching
   - [ ] Stop Visual Effects
   - [ ] Subtract Values
   - [ ] Swipe Gesture
   - [ ] Text Length
   - [ ] Text Operation
-  - [ ] Timer
+  - [x] Timer
   - [ ] Track Event
   - [ ] Trim Text
   - [ ] Tweet
   - [ ] Value
-  - [ ] Wait
+  - [x] Wait
 
 ## Developer Console
 Meteor includes a developer console for debugging and extra useful features. Press **~** to activate it

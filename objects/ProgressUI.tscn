@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cd5ei1i4xugop"]
 
-[ext_resource type="Script" uid="uid://biewjqcqw88n5" path="res://Scripts/ProgressUI.gd" id="1_r3gr6"]
+[ext_resource type="Script" uid="uid://csmkog7ufjjxl" path="res://Scripts/ProgressUI.gd" id="1_r3gr6"]
 [ext_resource type="FontFile" uid="uid://cn6bqbsl0rvut" path="res://helvetica-255/Helvetica.ttf" id="1_ty7uv"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_plwxy"]
@@ -16,12 +16,14 @@ script = ExtResource("1_r3gr6")
 offset_top = 717.0
 offset_right = 1024.0
 offset_bottom = 741.0
+mouse_filter = 2
 color = Color(0.16470589, 0.1882353, 0.20784314, 0.5686275)
 
 [node name="ProgressBar" type="ProgressBar" parent="." unique_id=1561129739]
 offset_top = 741.0
 offset_right = 1024.0
 offset_bottom = 768.0
+mouse_filter = 2
 theme_override_fonts/font = ExtResource("1_ty7uv")
 theme_override_styles/background = SubResource("StyleBoxFlat_plwxy")
 theme_override_styles/fill = SubResource("StyleBoxFlat_lfxun")
@@ -32,5 +34,6 @@ offset_left = 3.0
 offset_top = 721.0
 offset_right = 937.0
 offset_bottom = 738.0
+mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("1_ty7uv")
 text = "Converting sqlite data to JSON..."

@@ -3,7 +3,10 @@
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_yp6bn"]
 [ext_resource type="Script" uid="uid://bifjktb11qkhj" path="res://Scripts/TTFlabel.gd" id="2_b1002"]
 
-[node name="TTFLabelObject" type="Node2D" unique_id=1918359615]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
+
+[node name="TTFLabelObject" type="RigidBody2D" unique_id=1572347920]
+freeze = true
 script = ExtResource("1_yp6bn")
 
 [node name="Label" type="RichTextLabel" parent="." unique_id=2020233717]
@@ -14,3 +17,6 @@ offset_bottom = 11.0
 text = "EMPTY"
 horizontal_alignment = 1
 script = ExtResource("2_b1002")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1780899721]
+shape = SubResource("RectangleShape2D_plwxy")
