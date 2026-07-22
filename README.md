@@ -97,7 +97,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Keyboard Shortcut
   - [ ] Load Image
   - [ ] Load Scene
-    - [] Transitions
+    - [ ] Transitions
      - [x] none 
   - [ ] Load from File
   - [ ] Loop
