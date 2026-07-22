@@ -37,6 +37,12 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
     - [x] UI layers
 - [x] tags
 - [x] collision shapes
+  - [x] Graphic Objects
+  - [x] Empty Objects
+  - [] LifeObjects
+  - [] HelathBars
+  - [] Joystick
+  - [] Labels
 - [ ] Behaviors
   - [ ] Array
   - [ ] Authenticate OAuth
