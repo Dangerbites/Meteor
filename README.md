@@ -2,7 +2,7 @@
 <div align="center">
   <img src="logo-fill.png" alt="Meteor Logo Image" title="This is a sample image." width="200">
 
-  Hyperpad **.tap** player made with Godot 4.7 Mono
+  Hyperpad **.tap** player made with Godot 4.7
 
 <p align="center">
   <img src="docs/image.png" width="350">&nbsp;&nbsp;&nbsp;&nbsp;
@@ -96,9 +96,15 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Keyboard Event
   - [ ] Keyboard Shortcut
   - [ ] Load Image
+<<<<<<< Updated upstream
   - [ ] Load Scene
     - [ ] Transitions
      - [x] none 
+=======
+  - [x] Load Scene
+    - [ ] Transitions
+      - [x] none 
+>>>>>>> Stashed changes
   - [ ] Load from File
   - [ ] Loop
   - [ ] Math Expression
@@ -122,6 +128,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Render Texture
   - [ ] Round Number
   - [ ] Save to File
+  - [x] Scale By
   - [ ] Set Background
   - [ ] Set Background Color
   - [ ] Set Behavior State
@@ -150,16 +157,22 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Value
   - [x] Wait
 
+## Debugging
+To open the behavior interpreter debugging window press `TAB` to activate it
+
+This is used to check if behaviors are being ran properly and to debug. Letting you get the behaviors `TAG UUID` and copy its function name for implimentation.
+
 ## Developer Console
-Meteor includes a developer console for debugging and extra useful features. Press **~** to activate it
+Meteor includes a developer console for debugging and extra useful features. Press `~` to activate it
 
 **Commands List**
 ```
 loadScene <Scene Name : String>
+getSceneNames <Doesnt need arguments : Void>
 ```
 
 ## Prerequisites
-If youd like to contribute to Meteor you need to have Python installed with these packages as well as Godot 4.7 Mono.
+If youd like to contribute to Meteor you need to have Python installed with these packages as well as Godot 4.7.
 ```
 import base64
 import json
@@ -171,4 +184,3 @@ import tempfile
 import zipfile
 from plistlib import UID
 ```
-
