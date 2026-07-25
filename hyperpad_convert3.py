@@ -145,10 +145,13 @@ class BinaryJSONEncoder(json.JSONEncoder):
 # caller's try/except swallows it, and that behaviour's actions come back as
 # {} -- silently, with only a printed warning.
 #
-# This only affects RawTables below -- Behaviours/Objects still go through
-# the plain _resolve()/_decode_blob() path above and come out exactly as
-# they always have, empty actions dict and all, so nothing about the
-# existing hand-mapped fields changes.
+# _decode_blob() (used by get_behaviours()/get_objects(), and therefore by
+# RawTables too) now goes through this hardened resolver, so the affected
+# behaviours keep their other fields instead of coming back as {}. The
+# NSNull-keyed entry itself still shows up, just under a stringified
+# placeholder key (e.g. '{"__class__": "NSNull"}') instead of crashing the
+# whole dict -- harmless leftover data that nothing else will ever look up
+# by name.
 #
 # The fix: when a resolved key isn't hashable, use a stable JSON string of
 # it as the key instead of raising. Ordinary string/number keys (the
@@ -290,7 +293,14 @@ class HyperPadProject:
         if cached is not None:
             return cached
         try:
-            result = unarchive_bplist_bytes(blob)
+            # Uses the hardened resolver: some behaviours (e.g. "Set Graphic
+            # v1.26") contain a stray legacy-migration artifact - a
+            # dictionary entry whose *key* resolves to NSNull instead of a
+            # string - which crashes the plain resolver with "unhashable
+            # type: 'dict'" and silently drops the whole actions dict to {}.
+            # unarchive_bplist_bytes_safe avoids that by falling back to a
+            # stable JSON-string key instead of raising. See _safe_key.
+            result = unarchive_bplist_bytes_safe(blob)
         except Exception as exc:
             self.warnings.append(f"failed to decode blob ({len(blob)} bytes): {exc}")
             result = {}
@@ -334,6 +344,15 @@ class HyperPadProject:
 
             entry = {
                 "name": s["ZLEVELNAME"],
+                # ZINDEX is a 0-based position among scenes of the same
+                # type (Scenes vs Overlays), separate from Z_PK. This is
+                # what a "Load Level" behaviour's own "index" action field
+                # actually references - NOT the Z_PK key used in SceneMap.
+                # Confirmed empirically: a Load Level with index=1 matches
+                # the ZLEVELDATA row whose ZINDEX is 1, not the one whose
+                # Z_PK is 1 (Z_PK values aren't contiguous/zero-based and
+                # Global, which has no ZLEVELDATA row at all, isn't counted).
+                "index": s.get("ZINDEX"),
                 "position": (s["ZX_POS"], s["ZY_POS"]),
                 "zoom": s["ZSCALE"],
                 "preload": s["ZPRELOAD"],
@@ -369,6 +388,16 @@ class HyperPadProject:
                 # higher = further front) - negate this value when
                 # assigning it to a Godot node's z_index.
                 "z_order": l["ZINDEX"],
+                # ZUUID is what "Show Layer"/"Hide Layer" behaviours actually
+                # store in their "index" action field - NOT the Z_PK used as
+                # this dict's key. Confirmed empirically against ZLAYERDATA:
+                # a Show Layer behaviour's index of "B4F8CC11-..." matches
+                # the ZUUID of the ZLAYERDATA row whose Z_PK is 3, not a
+                # row keyed by Z_PK 3 in any other sense. Some layers (the
+                # editor's default/unnamed ones) have a NULL ZUUID - surfaced
+                # here as null, since a behaviour can never target one of
+                # those by index anyway.
+                "uuid": l["ZUUID"],
             }
         return layers
 
@@ -460,6 +489,17 @@ class HyperPadProject:
         return organised, ui_objects
 
     # ---- behaviours -------------------------------------------
+    # Action fields that store a bare ZPATHDATA.ZUNIQUEID string directly
+    # (not wrapped in a BehaviourInputField like most other action values)
+    # and should be resolved to their actual asset path. Confirmed
+    # empirically: "Play Sound"'s soundPath and "Set Graphic"'s graphic
+    # both hold 36-char UUID strings that match ZPATHDATA.ZUNIQUEID rows,
+    # e.g. soundPath "AE41CCC2-..." -> ZPATHDATA row with ZPATH
+    # "Assets/Sounds/open menu". "behaviourA" (used by "Behaviour On")
+    # also holds a bare UUID but that one refers to another behaviour's
+    # own tag, not an asset - deliberately NOT included here.
+    _ASSET_PATH_ACTION_KEYS = {"soundPath", "graphic"}
+
     def get_behaviours(self):
         merged = {}
         for level_dir in self.level_dirs:
@@ -471,6 +511,12 @@ class HyperPadProject:
         tables = self.level_tables[level_dir]
         objects_by_pk = {o["Z_PK"]: o for o in tables.get("ZOBJECTDATA", [])}
 
+        # Same ZPATHDATA -> path lookup _get_objects_for_level() already
+        # uses for ZOBJECTDATA.ZPATH/ZPATHSECONDARY - reused here so
+        # behaviour action fields that reference an asset by UUID resolve
+        # to the same real path, scoped to this level's own path table.
+        asset_paths = {p["ZUNIQUEID"]: p["ZPATH"] for p in tables.get("ZPATHDATA", [])}
+
         organised = {}
         for b in tables.get("ZBEHAVIOURDATA", []):
             owner = objects_by_pk.get(b["ZOBJECT"])
@@ -479,6 +525,12 @@ class HyperPadProject:
 
             actions = self._decode_blob(b["ZACTIONS"])
             groups = self._decode_blob(b.get("ZGROUPS")) if b.get("ZGROUPS") else []
+
+            if isinstance(actions, dict):
+                for key in self._ASSET_PATH_ACTION_KEYS:
+                    raw_value = actions.get(key)
+                    if isinstance(raw_value, str) and raw_value in asset_paths:
+                        actions[key] = asset_paths[raw_value]
 
             entry = {
                 "actions": actions,

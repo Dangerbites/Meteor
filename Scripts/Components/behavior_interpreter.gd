@@ -480,3 +480,169 @@ func Scale(_behavior_data: Dictionary) -> void:
 
 func Scale_v2_7(_behavior_data):
 	Scale(_behavior_data)
+
+func Show_Layer_v1_26(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var what_layer = check_value_key(_behavior_data["actions"]["index"])
+
+	if what_layer is float:
+		match what_layer:
+			-1.0:
+				var LayersUI = get_tree().get_first_node_in_group("LayersUI") as CanvasLayer
+				LayersUI.get_child(1).show()
+
+	if what_layer is String:
+		for node in get_tree().get_nodes_in_group("hyperpadLayer"):
+			if node.name == what_layer:
+				node.show()
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+
+func Change_Colour(_behavior_data) -> void:
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions = _behavior_data["actions"]
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Change_Colour: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	# colourPicker is an "#RRGGBBAA" hex string - Color.html() parses it directly.
+	var colour_hex = str(get_action_field(actions, "colourPicker", "#FFFFFFFF"))
+	var target_colour = Color.html(colour_hex)
+	var duration = float(get_action_field(actions, "duration", 0.0))
+
+	if duration <= 0.0:
+		for node in target_nodes:
+			node.modulate = target_colour
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	var tween = create_tween()
+	tween.set_parallel(true)
+	for node in target_nodes:
+		tween.tween_property(node, "modulate", target_colour, duration)
+
+	await tween.finished
+
+	if not is_instance_valid(self):
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+func Destroy_Object(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var target_nodes = get_target_nodes(_behavior_data)
+	for node in target_nodes:
+		node.queue_free()
+		print("deleted: %s" % node)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+func Play_Sound_v1_21(_behavior_data) -> void:
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var sound_path = str(actions.get("soundPath", ""))
+
+	if sound_path == "":
+		Console.print_line("Play_Sound_v1_21: no soundPath configured — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var sound_file_name = sound_path.get_file()
+	var base_path = "user://project/" + sound_path + "/" + sound_file_name
+
+	# Try .ogg first (converted from .m4a by the extractor), then .wav
+	var sound_source: AudioStream = null
+	var ogg_path = base_path + ".ogg"
+	var wav_path = base_path + ".wav"
+
+	if FileAccess.file_exists(ogg_path):
+		sound_source = AudioStreamOggVorbis.load_from_file(ogg_path)
+	elif FileAccess.file_exists(wav_path):
+		sound_source = AudioStreamWAV.load_from_file(wav_path)
+
+	if sound_source == null:
+		Console.print_line("Play_Sound_v1_21: could not load audio for '%s' (neither .ogg nor .wav found)" % sound_path)
+		run_next_behavior(_behavior_data)
+		return
+
+	var audio_node := AudioStreamPlayer.new()
+	add_child(audio_node)
+	audio_node.stream = sound_source
+	audio_node.pitch_scale = 1.0 + (float(get_action_field(actions, "pitch", 0.0)) / 100.0)
+	audio_node.volume_db = float(get_action_field(actions, "volume", 100.0)) / 50
+	audio_node.play()
+
+	await audio_node.finished
+
+	if is_instance_valid(audio_node):
+		audio_node.queue_free()
+
+	if not is_instance_valid(self):
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+
+func Play_Music_v1_21(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var sound_path = str(actions.get("soundPath", ""))
+
+	if sound_path == "":
+		Console.print_line("Play_Music_v1_21: no soundPath configured — skipping")
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	# Build file path (same logic as Play_Sound)
+	var sound_file_name = sound_path.get_file()
+	var base_path = "user://project/" + sound_path + "/" + sound_file_name
+
+	# Load .ogg or .wav
+	var sound_source: AudioStream = null
+	var ogg_path = base_path + ".ogg"
+	var wav_path = base_path + ".wav"
+	if FileAccess.file_exists(ogg_path):
+		sound_source = AudioStreamOggVorbis.load_from_file(ogg_path)
+	elif FileAccess.file_exists(wav_path):
+		sound_source = AudioStreamWAV.load_from_file(wav_path)
+
+	if sound_source == null:
+		Console.print_line("Play_Music_v1_21: could not load audio for '%s'" % sound_path)
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	# Use a persistent music player under the root so it survives scene changes.
+	var root = get_tree().root
+	var music_player = root.get_node_or_null("MusicPlayer")
+	if not music_player:
+		music_player = AudioStreamPlayer.new()
+		music_player.name = "MusicPlayer"
+		root.add_child(music_player)
+
+	# Stop previous music (if any) and apply new settings.
+	if music_player.playing:
+		music_player.stop()
+
+	music_player.stream = sound_source
+	music_player.volume_db = float(get_action_field(actions, "volume", 100.0)) / 50.0
+	music_player.stream.loop = bool(check_value_key(actions["loop"]))   # loop field contains true/false
+	music_player.play()
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)

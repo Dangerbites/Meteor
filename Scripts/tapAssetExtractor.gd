@@ -18,11 +18,61 @@ const WINDOWS_RESERVED_NAMES := [
 	"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
 	"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 ]
+## --- Python-based audio conversion ---------------------------------------
+## Godot has no built-in AAC/M4A decoder, so extracted .m4a files are
+## unplayable as-is. m4a_to_ogg.py (bundled with the project) uses PyAV
+## to convert .m4a -> .ogg, which Godot's AudioStreamOggVorbis loads
+## natively. The script is called synchronously right after each .m4a is
+## written to disk, so every playable sound is already an .ogg file when
+## extraction finishes.
+const PYTHON_SCRIPT_NAME := "m4a_to_ogg.py"
 
-## --- Progress UI support (thread‑safe) ---
-var progress_ui : Node = null
-var _worker_thread : Thread = null
+## Tries to locate the Python conversion script in two places:
+##   1. The user data folder (OS.get_user_data_dir()) – useful when
+##      the script is copied alongside other runtime tooling.
+##   2. The project's res:// folder (so it can be versioned directly).
+## Returns an empty string if neither location is found.
+static func _get_python_script_path() -> String:
+	# 1) Look in user data dir (same pattern as the old ffmpeg.exe).
+	var user_path := OS.get_user_data_dir().path_join(PYTHON_SCRIPT_NAME)
+	if FileAccess.file_exists(user_path):
+		return ProjectSettings.globalize_path(user_path)   # Python needs a real path.
 
+	# 2) Fallback: look inside the project folder.
+	if ResourceLoader.exists("res://" + PYTHON_SCRIPT_NAME):
+		return ProjectSettings.globalize_path("res://" + PYTHON_SCRIPT_NAME)
+
+	return ""
+
+
+## Converts a just-written .m4a file to .ogg in place via Python.
+## Returns true if the .ogg was produced.
+static func _convert_m4a_to_ogg(m4a_path: String) -> bool:
+	var script_path := _get_python_script_path()
+	if script_path.is_empty():
+		push_warning("_convert_m4a_to_ogg: %s not found – skipping conversion of '%s'" % [PYTHON_SCRIPT_NAME, m4a_path])
+		return false
+
+	var ogg_path := m4a_path.get_basename() + ".ogg"
+
+	# Godot's OS.execute needs real filesystem paths, not user:// URIs.
+	var real_m4a_path := ProjectSettings.globalize_path(m4a_path)
+	var real_ogg_path := ProjectSettings.globalize_path(ogg_path)
+
+	# Use "python" – if your system requires "python3", adjust here.
+	var args := PackedStringArray([script_path, real_m4a_path, real_ogg_path])
+	var output := []
+	var exit_code := OS.execute("python", args, output, true)
+
+	if exit_code != 0:
+		push_warning("_convert_m4a_to_ogg: Python script exited with code %d converting '%s'. Output:\n%s" % [exit_code, m4a_path, "\n".join(output)])
+		return false
+
+	if not FileAccess.file_exists(ogg_path):
+		push_warning("_convert_m4a_to_ogg: Python script ran but '%s' was not created" % ogg_path)
+		return false
+
+	return true
 ## Windows silently strips trailing dots/spaces ... (original static functions unchanged) ...
 
 static func sanitize_path_segment(segment: String) -> String:
@@ -53,7 +103,7 @@ static func sanitize_full_path(path: String) -> String:
 	return "/".join(parts)
 
 
-## Original synchronous extraction (unchanged).
+## Original synchronous extraction (unchanged, + m4a conversion).
 func extract_tap_assets(tap_file_path: String, prefer_hd: bool = true, verbose: bool = true) -> Dictionary:
 	var result := {
 		"success": false,
@@ -136,6 +186,11 @@ func extract_tap_assets(tap_file_path: String, prefer_hd: bool = true, verbose: 
 		if verbose:
 			print("Extracted: ", target_path)
 
+		if target_path.get_extension().to_lower() == "m4a":
+			if _convert_m4a_to_ogg(target_path):
+				if verbose:
+					print("Converted to .ogg: ", target_path.get_basename() + ".ogg")
+
 	reader.close()
 
 	result.success = result.errors.is_empty()
@@ -168,7 +223,14 @@ func extract_tap_assets_async(tap_file_path: String, prefer_hd: bool = true, ver
 		if progress_ui:
 			progress_ui.set_progress("Thread start failed", 0.0)
 
+## --- Progress UI support (thread‑safe) ---
+var progress_ui : Node = null
+var _worker_thread : Thread = null
+
 ## Static worker – everything in this method runs on the background thread.
+## OS.execute() is safe to call from a background thread (it's a blocking
+## subprocess call, not a Godot-object operation), so m4a->ogg conversion
+## works here the same way it does in the main-thread extraction paths.
 static func _extract_worker(tap_file_path: String, prefer_hd: bool, verbose: bool, autoload_instance: Node) -> void:
 	# The worker builds the result dict locally, then passes it to the main thread.
 	var result := {
@@ -252,6 +314,9 @@ static func _extract_worker(tap_file_path: String, prefer_hd: bool, verbose: boo
 		result.extracted.append(target_path)
 		# No print here – console logging from a thread is okay but deferred prints
 		# are possible if needed. We skip verbose prints for thread cleanliness.
+
+		if target_path.get_extension().to_lower() == "m4a":
+			_convert_m4a_to_ogg(target_path)
 
 	reader.close()
 	result.success = result.errors.is_empty()
@@ -394,6 +459,11 @@ func extract_tap_assets_non_blocking(tap_file_path: String, prefer_hd: bool = tr
 		f.close()
 
 		result.extracted.append(target_path)
+
+		if target_path.get_extension().to_lower() == "m4a":
+			if _convert_m4a_to_ogg(target_path):
+				if verbose:
+					print("Converted to .ogg: ", target_path.get_basename() + ".ogg")
 
 		# Yield control every BATCH_SIZE files so the engine can render and process input.
 		if i % BATCH_SIZE == 0:

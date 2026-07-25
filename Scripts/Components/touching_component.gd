@@ -29,7 +29,7 @@ func mouse_exit():
 func _input(_event: InputEvent) -> void:
 	if hovering:
 		if Input.is_action_just_pressed("left_click"):
-			print("Touched ", get_parent().name)
+			#print("Touched ", get_parent().name)
 
 			for key in started_touching_to_trigger:
 				for behavior_data in started_touching_to_trigger[key]:

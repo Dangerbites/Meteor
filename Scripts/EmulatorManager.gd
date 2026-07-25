@@ -25,7 +25,9 @@ var recent_projects = []
 signal project_loaded(tap_path)
 
 func _ready() -> void:
+
 	ensure_hyperpad_convert_in_user_folder()
+	ensure_m4a_converter_in_user_folder()
 
 	get_window().files_dropped.connect(_on_files_dropped)
 
@@ -149,7 +151,18 @@ func _get_layer_container(layer_key: String, layers: Dictionary) -> Node2D:
 
 	var layer_info = layers[layer_key]
 	var container := Node2D.new()
-	container.name = "Layer_%s" % layer_key
+
+	# Name the container after the layer's UUID (falling back to the
+	# Z_PK-based layer_key for layers with no UUID, e.g. default/unnamed
+	# editor layers) so it can be found by name and so Show_Layer /
+	# Hide_Layer's UUID-based lookup has a stable, human-inspectable name
+	# to match against in the scene tree / remote debugger.
+	var layer_uuid = layer_info.get("uuid", null)
+	container.name = str(layer_uuid) if layer_uuid != null else "Layer_%s" % layer_key
+
+	#print("Created layer container: key=", layer_key, " uuid=", layer_uuid, " name=", container.name)
+
+	container.add_to_group("hyperpadLayer")
 
 	# ZINDEX is inverted relative to Godot's z_index: in hyperPad, a
 	# HIGHER z_order sits further BACK, while Godot's z_index is the
@@ -163,18 +176,27 @@ func _get_layer_container(layer_key: String, layers: Dictionary) -> Node2D:
 	var parent_name = "GlobalUI" if layer_info["ui_layer"] else "Scene"
 	get_tree().current_scene.get_node(parent_name).add_child(container)
 
+	# Apply the layer's own hidden state up front, so a layer marked
+	# hidden in the editor starts hidden instead of every object inside
+	# it needing its own individual visibility/alpha toggled to fake it.
+	if layer_info.get("hidden", false):
+		container.hide()
+
 	_layer_nodes[layer_key] = container
 	return container
 
 
 func load_scene(_scene : String = main_scene_name):
-	for i in get_tree().current_scene.get_node("Scene").get_children():
-		i.queue_free()
+	_layer_nodes.clear()
 
 	for i in get_tree().current_scene.get_node("GlobalUI").get_children():
 		i.queue_free()
 
-	_layer_nodes.clear()
+	for i in get_tree().current_scene.get_node("Scene").get_children():
+		i.queue_free()
+
+	await get_tree().create_timer(0.01).timeout
+	#_layer_nodes.clear()
 
 	var objects
 	var objects_dict = project_json_parsed["Objects"]
@@ -308,6 +330,40 @@ func ensure_hyperpad_convert_in_user_folder() -> void:
 	target_file.store_string(content)
 	target_file.close()
 	print("Copied hyperpad_convert3.py to user folder.")
+
+func ensure_m4a_converter_in_user_folder() -> void:
+	var user_dir = OS.get_user_data_dir()
+	var target_path = user_dir.path_join("m4a_to_ogg.py")
+
+	# Already there? Nothing to do.
+	if FileAccess.file_exists(target_path):
+		print("m4a_to_ogg.py already exists in user folder.")
+		return
+
+	# Source path inside the project's resources.
+	var source_path = "res://m4a_to_ogg.py"
+	if not FileAccess.file_exists(source_path):
+		push_error("Source file not found: " + source_path)
+		return
+
+	# Read the whole file.
+	var source_file = FileAccess.open(source_path, FileAccess.READ)
+	if source_file == null:
+		push_error("Failed to open source file: " + source_path)
+		return
+
+	var content = source_file.get_as_text()
+	source_file.close()
+
+	# Write it to the user folder.
+	var target_file = FileAccess.open(target_path, FileAccess.WRITE)
+	if target_file == null:
+		push_error("Failed to create target file: " + target_path)
+		return
+
+	target_file.store_string(content)
+	target_file.close()
+	print("Copied m4a_to_ogg.py to user folder.")
 
 # -------------------------
 # DEVELOPER CONSOLE FUNCTIONS

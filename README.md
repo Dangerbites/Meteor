@@ -62,6 +62,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Comment
   - [ ] Connect to Socket
   - [ ] Create Collision
+  - [x] Destroy Object
   - [ ] Delete from File
   - [ ] Device Identifier
   - [ ] Dictionary
@@ -114,6 +115,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Noise Map
   - [ ] Open URL
   - [ ] Post to Facebook
+  - [x] Play Sound v1.21
+  - [x] Play Music v1.21
   - [ ] Quit Project
   - [ ] Random Number
   - [ ] Raycast Test
@@ -127,12 +130,14 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Set Background Color
   - [ ] Set Behavior State
   - [ ] Set Cursor Style
+  - [x] Set Color
   - [ ] Set Music Settings
   - [ ] Set Physics Mode
   - [ ] Set Physics Property
   - [ ] Set Sound Settings
   - [ ] Set Visibility
   - [ ] Share
+  - [x] Show Layer v1.26
   - [ ] Socket Event
   - [ ] Socket.io Client
   - [ ] Sort Array
@@ -168,6 +173,7 @@ getSceneNames <Doesnt need arguments : Void>
 ## Prerequisites
 If youd like to contribute to Meteor you need to have Python installed with these packages as well as Godot 4.7.
 ```
+import av
 import base64
 import json
 import os

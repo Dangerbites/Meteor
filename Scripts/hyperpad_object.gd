@@ -9,9 +9,8 @@ var layer : int
 func _ready() -> void:
 	visible = !object_data["gameobjectdata"]["hidden"]
 
-	layer = object_data["layer"] 
-
-	visible = !EmulatorManager.project_json_parsed["Layers"][str(layer)]["hidden"]
+	#layer = object_data["layer"] 
+	#visible = !EmulatorManager.project_json_parsed["Layers"][str(layer)]["hidden"]
 
 	ui_element = object_data["ui_element"]
 	obj_name = object_data["name"]
