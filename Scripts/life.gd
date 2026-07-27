@@ -71,7 +71,7 @@ func set_lives(lives: int, max_per_row: int = 5) -> void:
 			start_x + col_index * spacing_x,
 			start_y + row_index * spacing_y
 		)
-		# Default Sprite2D is already centered (offset = 0,0) – perfect for grid layout
+		# Default Sprite2D is already centered (offset = 0,0) - perfect for grid layout
 		add_child(sprite)
 
 

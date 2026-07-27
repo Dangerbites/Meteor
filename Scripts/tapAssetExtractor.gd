@@ -360,13 +360,13 @@ func _on_extraction_finished(result: Dictionary) -> void:
 
 
 ## Convenience helper – unchanged.
-func get_asset_user_path(asset_path) -> String:
-	if not (asset_path is String):
-		push_error("get_asset_user_path: Expected a non-null String, got: %s" % asset_path)
-		return ""   # fallback – adjust as needed
-	var sanitized_dir := sanitize_asset_path(asset_path)
-	var base_name := sanitize_path_segment(asset_path.get_file())
-	return OUTPUT_ROOT.path_join(sanitized_dir).path_join(base_name + ".png")
+#func get_asset_user_path(asset_path) -> String:
+#	if not (asset_path is String):
+#		push_error("get_asset_user_path: Expected a non-null String, got: %s" % asset_path)
+#		return ""   # fallback – adjust as needed
+#	var sanitized_dir := sanitize_asset_path(asset_path)
+#	var base_name := sanitize_path_segment(asset_path.get_file())
+#	return OUTPUT_ROOT.path_join(sanitized_dir).path_join(base_name + ".png")
 
 ## Extracts assets spread over multiple frames so the game never freezes.
 ## progress_ui_node: optional ProgressUI node to update.
@@ -482,3 +482,59 @@ func extract_tap_assets_non_blocking(tap_file_path: String, prefer_hd: bool = tr
 	extraction_finished.emit(result)
 	if progress_ui_node:
 		progress_ui_node.set_progress("Done", 100.0)
+
+## Convenience helper – now resolves by scanning the folder instead of
+## assuming the file is named after the last path segment.
+##
+## hyperPad's exported asset folders sometimes contain a single file whose
+## name has nothing to do with the asset_path (e.g. "Grass Ground End/"
+## containing "grassRight.png"). Since each of these folders only ever has
+## one relevant file, we just open the directory and grab the first file
+## with a recognized image/font extension rather than constructing a name.
+##
+## extensions_to_try lets callers ask for a font instead of an image
+## (used by load_ttf_from_folder-style lookups if you want to unify those
+## through this same helper later); defaults to image extensions since
+## that's what every Sprite2D/TextureProgressBar/etc. caller wants today.
+const IMAGE_EXTENSIONS := ["png", "jpg", "jpeg", "webp", "bmp", "tga"]
+const FONT_EXTENSIONS := ["ttf", "otf", "ttc"]
+
+func get_asset_user_path(asset_path, extensions: PackedStringArray = PackedStringArray(IMAGE_EXTENSIONS)) -> String:
+	if not (asset_path is String):
+		push_error("get_asset_user_path: Expected a non-null String, got: %s" % asset_path)
+		return ""
+
+	var sanitized_dir := sanitize_asset_path(asset_path)
+	var dir_path := OUTPUT_ROOT.path_join(sanitized_dir)
+
+	var found_path := _find_first_file_with_extension(dir_path, extensions)
+	if not found_path.is_empty():
+		return found_path
+
+	# Fallback to the old name-guessing behavior, in case the folder is
+	# missing/unreadable or genuinely uses the expected filename. This
+	# keeps old behavior as a safety net rather than a hard break.
+	var base_name := sanitize_path_segment(asset_path.get_file())
+	push_warning("get_asset_user_path: no file found in '%s' - falling back to guessed name '%s.png'" % [dir_path, base_name])
+	return dir_path.path_join(base_name + ".png")
+
+
+## Scans dir_path (a user:// path) for the first file whose extension is
+## in `extensions`. Returns "" if the dir doesn't exist or has no match.
+func _find_first_file_with_extension(dir_path: String, extensions: PackedStringArray) -> String:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return ""
+
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if not dir.current_is_dir():
+			var ext := file_name.get_extension().to_lower()
+			if ext in extensions:
+				dir.list_dir_end()
+				return dir_path.path_join(file_name)
+		file_name = dir.get_next()
+	dir.list_dir_end()
+
+	return ""

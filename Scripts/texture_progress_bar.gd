@@ -69,7 +69,7 @@ func apply_anchor_offset() -> void:
 	var offset = Vector2.ZERO
 	if object_data.has("anchor"):
 		var anchor = Vector2(object_data["anchor"][0], object_data["anchor"][1])
-		# Control origin is top‑left; shift so that the anchor point sits at (0,0)
+		# Control origin is top-left; shift so that the anchor point sits at (0,0)
 		offset = Vector2(
 			-anchor.x * box_size.x,
 			(anchor.y - 1.0) * box_size.y

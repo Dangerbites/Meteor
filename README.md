@@ -71,7 +71,9 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Edit Text Field
   - [ ] Emit to Socket
   - [ ] Execute Behaviour
-  - [ ] Execute Sequence
+  - [x] Execute Sequence
+    - [x] Sequential
+    - [ ] Random (Implimented I think? Should still be tested)
   - [x] Frame Event
     - Unsure, should check bugs for it
   - [ ] Get Array Count
@@ -112,6 +114,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Modify Tags
   - [ ] Mouse Event
   - [x] Move By
+  - [x] Move To Point
   - [ ] Noise Map
   - [ ] Open URL
   - [ ] Post to Facebook
@@ -150,6 +153,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Text Length
   - [ ] Text Operation
   - [x] Timer
+  - [x] Timer v1.33
   - [ ] Track Event
   - [ ] Trim Text
   - [ ] Tweet

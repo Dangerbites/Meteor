@@ -46,5 +46,5 @@ func apply_anchor_offset() -> void:
 	collision.shape = new_shape
 	collision.shape.size = tex_size * scale
 
-	# position can stay as is – it’s a node property, not shared
+	# position can stay as is - it's a node property, not shared
 	collision.position = position

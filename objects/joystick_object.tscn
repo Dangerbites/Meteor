@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_v7pq7"]
 [ext_resource type="Script" uid="uid://cr5e14dley2wa" path="res://Scripts/joystick.gd" id="2_nlt62"]
+[ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="3_ma7gg"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_plwxy"]
 
@@ -20,3 +21,5 @@ script = ExtResource("2_nlt62")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=810116966]
 shape = SubResource("CircleShape2D_plwxy")
+
+[node name="touchingComponent" parent="." unique_id=1357324686 instance=ExtResource("3_ma7gg")]

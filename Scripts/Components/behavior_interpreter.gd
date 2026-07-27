@@ -3,25 +3,11 @@ extends Node
 # DEBUG
 static var behavior_status := {}   # { tag: "idle" | "running" | "done" | "error" }
 
-# --- TUNABLE ---
-# "Scale by" behaviors in "Meters" mode store raw values like -200/-100 that
-# are clearly not meant to be used as literal Vector2 scale multipliers
-# (Godot scale of 1.0 == 100%; -200 would flip AND balloon the node).
-# Treating "Meters" mode as a RELATIVE delta (matching the "Scale by" alias,
-# not "Scale to") and dividing the raw value by this constant to turn it
-# into a fractional change against the node's current scale. Adjust this
-# until a Scale-by-Meters behavior visually matches what hyperPad shows.
-# Bigger divisor = smaller/slower visual change per unit of raw value.
-
 func _set_behavior_status(tag: String, status: String) -> void:
 	behavior_status[tag] = status
 
 # ----------- TWEEN DATA -----------------------------------------------------------
 
-# Best-effort mapping — verify against real hyperPad output before shipping.
-# cocos2d-style ease actions are typically ordered: Linear, then
-# Sine/Quad/Cubic/Quart/Quint/Expo/Circ/Elastic/Back/Bounce, each with
-# In/Out/InOut variants.
 const EASE_MAP = {
 	0:  [Tween.TRANS_LINEAR,  Tween.EASE_IN_OUT],
 	1:  [Tween.TRANS_QUAD,    Tween.EASE_IN],
@@ -65,7 +51,6 @@ func scene_ready() -> void:
 
 	behaviorData = EmulatorManager.project_json_parsed["Behaviours"][get_parent().id]
 
-	# running the roots only
 	for behavior in behaviorData:
 		var behavior_name = behavior.get("name", "no behavior name???")
 		var is_root = behavior.get("root", 0)
@@ -88,9 +73,8 @@ var FRAME_EVENTS_TO_RUN = []
 
 var TIMERS_TO_EXECUTE = []
 var TIMER_ELAPSED : float = 0.0
-var timer_elapsed: Dictionary = {} # { behavior_tag: float }
+var timer_elapsed: Dictionary = {}
 
-# stores each behavior's last-produced outputs: { behavior_tag: { output_name: value } }
 var output_store: Dictionary = {}
 
 # -------- HELPER BEHAVIOR FUNCTIONS -----------------
@@ -99,23 +83,18 @@ func get_node_from_UUID(UUID : String):
 	for node in get_tree().get_nodes_in_group("HyperpadObject"):
 		if node.id == UUID:
 			return node
-	
 	return null
 
 func _behavior_repeats(behavior: Dictionary) -> bool:
-	# adjust this to whatever field actually marks a one-shot vs repeating timer
-	# e.g. if your hyperPad data has a "repeat" or "loop" input on Timer behaviors
 	var actions: Dictionary = behavior.get("actions", {})
 	return check_value_key(actions.get("repeat", {"valueKey": "$null", "value": true}))
 
 func remove_timer(behavior: Dictionary) -> void:
 	var tag = behavior["tag"]
 	TIMERS_TO_EXECUTE.erase(behavior)
-	timer_elapsed.erase(tag) # 
+	timer_elapsed.erase(tag)
 
 func _process(_delta: float) -> void:
-
-	# TIMER BHEAVIRO
 	var timers_to_remove: Array = []
 
 	for behavior in TIMERS_TO_EXECUTE:
@@ -124,17 +103,16 @@ func _process(_delta: float) -> void:
 
 		if wait_time == 0:
 			run_next_behavior(behavior)
-			#print(wait_time)
 
 		if wait_time <= 0.0:
-			continue # avoid div-by-zero / instant-fire garbage
+			continue
 
 		timer_elapsed[tag] = timer_elapsed.get(tag, 0.0) + _delta
 
 		if timer_elapsed[tag] >= wait_time:
 			timer_elapsed[tag] -= wait_time
 			run_next_behavior(behavior)
-			print(wait_time)
+			#print(wait_time)
 
 			if not _behavior_repeats(behavior):
 				timers_to_remove.append(behavior)
@@ -142,8 +120,6 @@ func _process(_delta: float) -> void:
 	for behavior in timers_to_remove:
 		remove_timer(behavior)
 
-
-	# FRAME EVENT BEHAVIOR
 	for frame_event in FRAME_EVENTS_TO_RUN:
 		var get_next_behavior_id: Array = frame_event.get("actions", {}).get("outputs", [])
 
@@ -179,11 +155,10 @@ func run_next_behavior(_behavior_data) -> void:
 				else:
 					Console.print_line("run_next_behavior | Warning: No method '%s' found" % method_name)
 
-# Now reads stored output instead of re-calling the behavior.
 func check_value_key(value_key_data):
 	if value_key_data["valueKey"] == "$null":
 		return value_key_data["value"]
-	
+
 	var behavior_tag = value_key_data["controlledBy"]
 	var key = value_key_data["valueKey"]
 	var source_outputs = output_store.get(behavior_tag, {})
@@ -199,15 +174,10 @@ func get_action_field(actions: Dictionary, key: String, default_value = 0):
 		return default_value
 	return check_value_key(actions[key])
 
-# Returns an array of Node2D objects to act upon.
-# If the behaviour has a "groups" array, collect every node from those groups.
-# Otherwise, fall back to the single object specified by the "objectA" action field.
 func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA") -> Array[Node2D]:
 	var actions: Dictionary = _behavior_data.get("actions", {})
 	var targets: Array[Node2D] = []
 
-	# Group mode — .get() with a typed default avoids a Nil leaking through
-	# when "groups" is absent, or explicitly stored as null, in the data.
 	var groups: Array = _behavior_data.get("groups", [])
 	if groups != null and not groups.is_empty():
 		for tag in groups:
@@ -215,7 +185,6 @@ func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA"
 				if node is Node2D:
 					targets.append(node)
 	else:
-		# Single object mode
 		var object_id = check_value_key(actions[object_key])
 		var node = get_node_from_UUID(object_id)
 		if node != null:
@@ -233,6 +202,9 @@ func Timer(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
+func Timer_v1_33(_behavior_data):
+	Timer(_behavior_data)
+
 func Frame_Event(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "running")
 	if !FRAME_EVENTS_TO_RUN.has(_behavior_data):
@@ -243,7 +215,7 @@ func Frame_Event(_behavior_data):
 
 	return { "dt": get_physics_process_delta_time() }
 
-var _active_move_tweens: Dictionary = {}   # { node_instance_id: Tween }
+var _active_move_tweens: Dictionary = {}
 func Move(_behavior_data) -> void:
 	_set_behavior_status(_behavior_data["tag"], "running")
 
@@ -263,14 +235,12 @@ func Move(_behavior_data) -> void:
 
 	var offset = Vector2(move_x * 30, -move_y * 30)
 
-	# We'll create a tween for each node and collect their finished signals
 	var all_tweens: Array[Tween] = []
 
 	for node in target_nodes:
 		var target_position = node.global_position + offset
 		var node_key = node.get_instance_id()
 
-		# Handle existing tween (interrupt / wait)
 		if _active_move_tweens.has(node_key):
 			var existing: Tween = _active_move_tweens[node_key]
 			if is_instance_valid(existing) and existing.is_valid():
@@ -292,14 +262,11 @@ func Move(_behavior_data) -> void:
 
 		tween.tween_property(node, "global_position", target_position, duration)
 
-		# Store tween to wait for later
 		all_tweens.append(tween)
 
-	# Wait for all tweens to finish before continuing
 	for tween in all_tweens:
 		await tween.finished
 
-	# Cleanup – remove finished tweens from the dictionary
 	for node in target_nodes:
 		var node_key = node.get_instance_id()
 		if _active_move_tweens.get(node_key) in all_tweens:
@@ -317,15 +284,40 @@ func Wait(_behavior_data) -> void:
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
+# tag: 80B9B29E-CCC2-4A86-8EA7-9BCEE86A9010
+# tag: 80B9B29E-CCC2-4A86-8EA7-9BCEE86A9010
+func While_Touching(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var object_id = check_value_key(actions["objectA"])
+	var object_to_touch = get_node_from_UUID(object_id) as RigidBody2D
+
+	if object_to_touch == null:
+		Console.print_line("While_Touching: objectA not found — skipping")
+		return
+
+	var touch_component = object_to_touch.get_node("touchingComponent")
+	if touch_component == null:
+		Console.print_line("While_Touching: no touchingComponent on %s" % object_id)
+		return
+
+	touch_component.set_while_touching_behavior(_behavior_data, self)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+
+	var parent = get_parent() as RigidBody2D
+	var mouse_pos = parent.get_global_mouse_position()
+	var screen_height = get_viewport().get_visible_rect().size.y
+	var flipped_y = screen_height - mouse_pos.y
+
+	return { "x": mouse_pos.x, "y": flipped_y, "dt": get_physics_process_delta_time() }
+
 func Started_Touching(_behavior_data):
 	var actions = _behavior_data["actions"]
-
-	# .get() with a typed default instead of raw bracket access — a missing
-	# or explicitly-null "groups" key used to silently produce Nil here,
-	# which then blew up as a Nil -> Array assignment downstream.
 	var groups: Array = _behavior_data.get("groups", [])
 
-	if groups == null or groups.is_empty(): # not looking for tags
+	if groups == null or groups.is_empty():
 		var object_id = check_value_key(actions["objectA"])
 		var object_to_touch = get_node_from_UUID(object_id) as RigidBody2D
 		var touch_component = object_to_touch.get_node("touchingComponent")
@@ -335,15 +327,7 @@ func Started_Touching(_behavior_data):
 			return
 
 		touch_component.set_touch_behavior(_behavior_data, self)
-	else: # looking for tags
-		# hyperPad group membership lives in project_json_parsed["Objects"]
-		# (per-scene dict of UUID -> object def, tags at gameobjectdata.tags)
-		# — it is NOT the same thing as Godot's get_tree() groups. Nothing
-		# calls add_to_group() from that data, so get_nodes_in_group() would
-		# always return empty here, silently dropping any behavior that
-		# targets objects by tag instead of by direct UUID. Resolve tag
-		# membership from the parsed JSON instead, the same way
-		# get_node_from_UUID() already looks objects up by UUID.
+	else:
 		var matched_uuids: Array = []
 		var all_scenes: Dictionary = EmulatorManager.project_json_parsed.get("Objects", {})
 
@@ -385,7 +369,7 @@ func Load_Level(_behavior_data) -> void:
 		return
 
 	var target_index = int(get_action_field(actions, "index", -1))
-	var scene_type = int(get_action_field(actions, "sceneType", 0)) # 0 = Scenes, 1 = Overlays (unverified)
+	var scene_type = int(get_action_field(actions, "sceneType", 0))
 
 	var list_key = "Overlays" if scene_type == 1 else "Scenes"
 	var candidates: Array = EmulatorManager.project_json_parsed[list_key]
@@ -405,7 +389,7 @@ func Load_Level(_behavior_data) -> void:
 	EmulatorManager.load_scene(target_name)
 
 @export var SCALE_METERS_DIVISOR: float = 20.0
-var _active_scale_tweens: Dictionary = {}   # { node_instance_id: Tween }
+var _active_scale_tweens: Dictionary = {}
 func Scale(_behavior_data: Dictionary) -> void:
 	_set_behavior_status(_behavior_data["tag"], "running")
 
@@ -417,39 +401,31 @@ func Scale(_behavior_data: Dictionary) -> void:
 		run_next_behavior(_behavior_data)
 		return
 
-	# Read action fields – use get_action_field which handles $null / linked values
 	var scale_type   = str(get_action_field(actions, "scaleType", "Percentage"))
 	var duration     = float(get_action_field(actions, "duration", 0.0))
 	var ease_action  = int(get_action_field(actions, "easeAction", 0))
-	# transformSpeed is ignored for now (same as Move)
 
-	# Interrupt handling – reuse the same pattern as Move
 	var all_tweens: Array[Tween] = []
 
 	for node in target_nodes:
 		var node_key = node.get_instance_id()
 
-		# Stop existing scale tween if requested (here we always interrupt to match Move's default)
 		if _active_scale_tweens.has(node_key):
 			var existing: Tween = _active_scale_tweens[node_key]
 			if is_instance_valid(existing) and existing.is_valid():
-				existing.kill()   # interrupt previous animation
+				existing.kill()
 
-		# Determine the target scale per-node, since "Meters" mode is
-		# relative to each node's own current scale (this is a "Scale BY",
-		# not a "Scale TO" — per the JSON's "alias": "Scale by").
 		var target_scale: Vector2
 		if scale_type == "Meters":
 			var sx = float(get_action_field(actions, "scaleXMeters", 0.0))
 			var sy = float(get_action_field(actions, "scaleYMeters", 0.0))
 			var delta = Vector2(sx / SCALE_METERS_DIVISOR, sy / SCALE_METERS_DIVISOR)
 			target_scale = node.scale + delta
-		else:  # Percentage (default) — also relative, matching "Scale by"
+		else:
 			var sx = float(get_action_field(actions, "scaleX", 0.0)) / 100.0
 			var sy = float(get_action_field(actions, "scaleY", 0.0)) / 100.0
 			target_scale = node.scale + Vector2(sx, sy)
 
-		# If duration is zero or negative, apply instantly
 		if duration <= 0.0:
 			node.scale = target_scale
 			continue
@@ -465,11 +441,9 @@ func Scale(_behavior_data: Dictionary) -> void:
 
 		all_tweens.append(tween)
 
-	# Wait for all tweens to finish before triggering next behaviour
 	for tween in all_tweens:
 		await tween.finished
 
-	# Clean up the dictionary
 	for node in target_nodes:
 		var node_key = node.get_instance_id()
 		if _active_scale_tweens.get(node_key) in all_tweens:
@@ -500,6 +474,26 @@ func Show_Layer_v1_26(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
+# tag: 658DD123-B5C1-4F1F-B4B1-0FF35D6BAA67
+func Hide_Layer_v1_26(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var what_layer = check_value_key(_behavior_data["actions"]["index"])
+
+	if what_layer is float:
+		match what_layer:
+			-1.0:
+				var LayersUI = get_tree().get_first_node_in_group("LayersUI") as CanvasLayer
+				LayersUI.get_child(1).hide()
+
+	if what_layer is String:
+		for node in get_tree().get_nodes_in_group("hyperpadLayer"):
+			if node.name == what_layer:
+				node.hide()
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
 
 func Change_Colour(_behavior_data) -> void:
 	_set_behavior_status(_behavior_data["tag"], "running")
@@ -512,7 +506,6 @@ func Change_Colour(_behavior_data) -> void:
 		run_next_behavior(_behavior_data)
 		return
 
-	# colourPicker is an "#RRGGBBAA" hex string - Color.html() parses it directly.
 	var colour_hex = str(get_action_field(actions, "colourPicker", "#FFFFFFFF"))
 	var target_colour = Color.html(colour_hex)
 	var duration = float(get_action_field(actions, "duration", 0.0))
@@ -562,7 +555,6 @@ func Play_Sound_v1_21(_behavior_data) -> void:
 	var sound_file_name = sound_path.get_file()
 	var base_path = "user://project/" + sound_path + "/" + sound_file_name
 
-	# Try .ogg first (converted from .m4a by the extractor), then .wav
 	var sound_source: AudioStream = null
 	var ogg_path = base_path + ".ogg"
 	var wav_path = base_path + ".wav"
@@ -608,11 +600,9 @@ func Play_Music_v1_21(_behavior_data):
 		run_next_behavior(_behavior_data)
 		return
 
-	# Build file path (same logic as Play_Sound)
 	var sound_file_name = sound_path.get_file()
 	var base_path = "user://project/" + sound_path + "/" + sound_file_name
 
-	# Load .ogg or .wav
 	var sound_source: AudioStream = null
 	var ogg_path = base_path + ".ogg"
 	var wav_path = base_path + ".wav"
@@ -627,7 +617,6 @@ func Play_Music_v1_21(_behavior_data):
 		run_next_behavior(_behavior_data)
 		return
 
-	# Use a persistent music player under the root so it survives scene changes.
 	var root = get_tree().root
 	var music_player = root.get_node_or_null("MusicPlayer")
 	if not music_player:
@@ -635,14 +624,259 @@ func Play_Music_v1_21(_behavior_data):
 		music_player.name = "MusicPlayer"
 		root.add_child(music_player)
 
-	# Stop previous music (if any) and apply new settings.
 	if music_player.playing:
 		music_player.stop()
 
 	music_player.stream = sound_source
 	music_player.volume_db = float(get_action_field(actions, "volume", 100.0)) / 50.0
-	music_player.stream.loop = bool(check_value_key(actions["loop"]))   # loop field contains true/false
+	music_player.stream.loop = bool(check_value_key(actions["loop"]))
 	music_player.play()
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: D385F638-0839-42ED-BB5B-757C00CE14B2
+var _execute_sequence_index: Dictionary = {}   # { behavior_tag: int } - next output index for Sequential mode
+
+# Runs exactly one specific behavior by tag (not every entry in "outputs"
+# like run_next_behavior does) - same dispatch logic (find by tag, resolve
+# method name, call, store dict results), just aimed at a single target.
+func _run_single_output(target_tag: String) -> void:
+	for behavior in behaviorData:
+		if behavior["tag"] == target_tag:
+			_set_behavior_status(target_tag, "running")
+			var behavior_name = behavior.get("name", "no behavior name???")
+			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+
+			if has_method(method_name):
+				var result = call(method_name, behavior)
+				if result is Dictionary:
+					output_store[target_tag] = result
+				_set_behavior_status(target_tag, "done")
+			else:
+				Console.print_line("_run_single_output | Warning: No method '%s' found" % method_name)
+			return
+
+func Execute_Sequence(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var outputs: Array = actions.get("outputs", [])
+	var sequence_type = str(get_action_field(actions, "sequenceType", "Sequential"))
+	var self_tag = _behavior_data["tag"]
+
+	if outputs.is_empty():
+		Console.print_line("Execute_Sequence: no outputs configured — skipping")
+		_set_behavior_status(self_tag, "done")
+		return
+
+	if sequence_type == "Random":
+		var target_tag = outputs[randi() % outputs.size()]
+		_run_single_output(target_tag)
+	else:  # "Sequential" (default)
+		print("pressed?")
+		var current_index: int = _execute_sequence_index.get(self_tag, 0)
+		# Clamp in case the outputs list shrank since the index was last saved.
+		current_index = current_index % outputs.size()
+
+		var target_tag = outputs[current_index]
+		_run_single_output(target_tag)
+
+		# Advance and loop back to 0 after the last output.
+		_execute_sequence_index[self_tag] = (current_index + 1) % outputs.size()
+
+	_set_behavior_status(self_tag, "done")
+	# Deliberately no run_next_behavior() call here: "outputs" on an
+	# Execute Sequence behaviour IS the list of branches to choose between,
+	# not a set of things to all run afterward - the chosen branch's own
+	# outputs (if any) continue the chain from inside _run_single_output.
+
+# tag: 8D0BECA2-6877-49C6-BC73-B62FAE70E810
+@export var MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE: float = 1.0
+ 
+# Prefer CollisionShape2D for the object's bounding size - it's a single
+# authoritative value Godot already computed, rather than reconstructing
+# it from texture pixels. The texture-based fallback below is kept for
+# objects with no collision shape, but it previously had a real bug:
+# it multiplied by sprite.scale only and ignored the RigidBody2D root's
+# OWN scale (node.scale) - confirmed via debug print, size_b came out as
+# (1080, 810) when the correct size (accounting for node_b.scale of
+# ~0.28 on top of sprite_b.scale of 0.5) is closer to (303, 227). Godot
+# multiplies a child's rendered size by every ancestor's scale, so both
+# factors are required, not just the sprite's own.
+func _get_hyperpad_object_size(node: Node2D) -> Vector2:
+	var collision_shape := node.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collision_shape != null and collision_shape.shape != null:
+		var shape := collision_shape.shape
+		if shape is RectangleShape2D:
+			return (shape as RectangleShape2D).size * collision_shape.scale * node.scale
+		elif shape is CircleShape2D:
+			var diameter = (shape as CircleShape2D).radius * 2.0
+			return Vector2(diameter, diameter) * collision_shape.scale * node.scale
+		elif shape is CapsuleShape2D:
+			var capsule := shape as CapsuleShape2D
+			return Vector2(capsule.radius * 2.0, capsule.height) * collision_shape.scale * node.scale
+ 
+	var sprite := node.get_node_or_null("Sprite2D") as Sprite2D
+	if sprite == null or sprite.texture == null:
+		return Vector2.ZERO
+	return sprite.texture.get_size() * sprite.scale * node.scale
+ 
+func Move_To_Object_v1_15(_behavior_data) -> void:
+	_set_behavior_status(_behavior_data["tag"], "running")
+ 
+	var actions: Dictionary = _behavior_data.get("actions", {})
+ 
+	var object_a_id = check_value_key(actions["objectA"])
+	var object_b_id = check_value_key(actions["objectB"])
+ 
+	var node_a = get_node_from_UUID(object_a_id)
+	var node_b = get_node_from_UUID(object_b_id)
+ 
+	if node_a == null or node_b == null:
+		Console.print_line("Move_To_Object_v1_15: objectA or objectB not found — skipping")
+		run_next_behavior(_behavior_data)
+		return
+ 
+	# relativeAnchorA/B_x/y are 0-100 percentages locating a point within
+	# each object's own bounding box (50/50 = center). X maps directly
+	# (both hyperPad/cocos2d and Godot go left-to-right, 0 at left).
+	# Y is FLIPPED: hyperPad/cocos2d use a bottom-left origin (Y-up, so
+	# Y=100% is the visual TOP), while Godot uses top-left origin (Y-down,
+	# so a Y of 1.0 in local space is the visual BOTTOM). Confirmed against
+	# a real hyperPad reference: relativeAnchorB_y of 99.97% places the
+	# anchor at the object's top edge, not its bottom - without the flip,
+	# the same value was landing at the bottom instead.
+	var relative_a = Vector2(
+		float(get_action_field(actions, "relativeAnchorA_x", 50.0)),
+		100.0 - float(get_action_field(actions, "relativeAnchorA_y", 50.0))
+	) / 100.0
+	var relative_b = Vector2(
+		float(get_action_field(actions, "relativeAnchorB_x", 50.0)),
+		100.0 - float(get_action_field(actions, "relativeAnchorB_y", 50.0))
+	) / 100.0
+ 
+	var size_a: Vector2 = _get_hyperpad_object_size(node_a)
+	var size_b: Vector2 = _get_hyperpad_object_size(node_b)
+ 
+	# relative_* is 0.5/0.5 at center - subtract that so the anchor is
+	# expressed as an offset FROM the object's origin (which Sprite2D
+	# renders centered on by default), not from its top-left corner.
+	var anchor_a_local = (relative_a - Vector2(0.5, 0.5)) * size_a
+	var anchor_b_local = (relative_b - Vector2(0.5, 0.5)) * size_b
+ 
+	var anchor_a_global = node_a.global_position + anchor_a_local
+	var anchor_b_global = node_b.global_position + anchor_b_local
+ 
+	# anchorA/B_x/y are added directly onto the computed target position
+	# (not transformed through local space/rotation) - anchorA_x/y often
+	# aren't even present in the JSON when an object uses the plain
+	# default center anchor with no custom offset. MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE
+	# lets the strength of this offset be dialed in without touching the
+	# formula - 1.0 = raw value as read from the JSON, unverified against
+	# real hyperPad output.
+	var offset_a = Vector2(
+		float(get_action_field(actions, "anchorA_x", 0.0)),
+		float(get_action_field(actions, "anchorA_y", 0.0))
+	) * MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE
+	var offset_b = Vector2(
+		float(get_action_field(actions, "anchorB_x", 0.0)),
+		float(get_action_field(actions, "anchorB_y", 0.0))
+	) * MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE
+ 
+	var move_delta = (anchor_b_global + offset_b) - (anchor_a_global + offset_a)
+	var target_position = node_a.global_position + move_delta
+ 
+	var duration = float(get_action_field(actions, "duration", 0.0))
+ 
+	if duration <= 0.0:
+		node_a.global_position = target_position
+	else:
+		var tween = create_tween()
+		tween.tween_property(node_a, "global_position", target_position, duration)
+		await tween.finished
+ 
+	if not is_instance_valid(self):
+		return
+ 
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+func Move_To_Point(_behavior_data) -> void:
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Move_To_Point: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	var screen_coordinates = bool(get_action_field(actions, "screenCoordinates", false))
+
+	var move_x_field: Dictionary = actions.get("moveX", {})
+	var is_chained = move_x_field.get("controlledBy", "self") != "self"
+
+	var raw_x = float(get_action_field(actions, "moveX", 0.0))
+	var raw_y = float(get_action_field(actions, "moveY", 0.0))
+
+	# World-space height of the visible play area, in the same Godot units
+	# the *30 conversion produces. Used to shift hyperPad's bottom-left
+	# origin (0,0 = bottom-left, Y-up) onto Godot's top-left origin
+	# (0,0 = top-left, Y-down) - a pure Y-negate isn't enough on its own,
+	# since that flips direction but not the origin point itself.
+	var world_height = get_viewport().get_visible_rect().size.y
+	var camera = get_viewport().get_camera_2d()
+	if camera != null:
+		world_height = get_viewport().get_visible_rect().size.y * camera.zoom.y
+
+	var target_position: Vector2
+	if screen_coordinates:
+		target_position = Vector2(raw_x, raw_y)
+	elif is_chained:
+		# raw_y here is Y-up (flipped by While_Touching using screen
+		# height) - convert back to Godot's native Y-down global space.
+		var screen_height = get_viewport().get_visible_rect().size.y
+		target_position = Vector2(raw_x, screen_height - raw_y)
+	else:
+		# Manually-typed "Absolute Position (m)": *30 scales hyperPad's
+		# meter units into Godot units, then world_height - (raw_y * 30)
+		# shifts the origin from hyperPad's bottom-left to Godot's
+		# top-left, so hyperPad's (0,0) (bottom-left) correctly lands at
+		# the bottom of the visible area instead of Godot's native (0,0)
+		# (top-left).
+		target_position = Vector2(raw_x * 30, world_height - (raw_y * 30))
+
+	var duration = float(get_action_field(actions, "duration", 0.0))
+	var ease_action = int(get_action_field(actions, "easeAction", 0))
+
+	var all_tweens: Array[Tween] = []
+
+	for node in target_nodes:
+		if duration <= 0.0:
+			node.global_position = target_position
+			continue
+
+		var tween = create_tween()
+		var ease_pair = _get_ease(ease_action)
+		tween.set_trans(ease_pair[0])
+		tween.set_ease(ease_pair[1])
+		tween.tween_property(node, "global_position", target_position, duration)
+		all_tweens.append(tween)
+
+	for tween in all_tweens:
+		await tween.finished
+
+	if not is_instance_valid(self):
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: EB52EB92-BA9F-43C6-B477-9706FE6A0D36
+func While_Colliding(_behavior_data):
+	_set_behavior_status(_behavior_data["tag"], "running")
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)

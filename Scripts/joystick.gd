@@ -50,12 +50,12 @@ func apply_anchor_offset() -> void:
 
 	# Use joystick_size as the reference size for the anchor offset.
 	# This works because the control's visual centre is at the middle of
-	# a square of size joystick_size × joystick_size.
+	# a square of size joystick_size x joystick_size.
 	var ref_size = Vector2(joystick_size, joystick_size)
 
 	# Same conversion as your Sprite2D example:
 	#   x = size.x * (0.5 - anchor.x)
-	#   y = size.y * (anchor.y - 0.5)   ← flipped because Cocos2d Y is reversed
+	#   y = size.y * (anchor.y - 0.5)   <- flipped because Cocos2d Y is reversed
 	position = Vector2(
 		ref_size.x * (0.5 - anchor.x),
 		ref_size.y * (anchor.y - 0.5)

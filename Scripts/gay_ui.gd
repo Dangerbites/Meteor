@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-func _update_recent_projects(tap_path):
+func _update_recent_projects(_tap_path):
 	$MenuBar/PopupMenu/PopupMenu.clear()
 	for x in EmulatorManager.recent_projects:
 		$MenuBar/PopupMenu/PopupMenu.add_item(x)
@@ -12,7 +12,7 @@ func _ready() -> void:
 	$MenuBar/PopupMenu.add_submenu_item("Recent TAPs", "PopupMenu")
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	pass
 
 func _recent_project_id_pressed(id: int) -> void:
