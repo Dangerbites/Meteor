@@ -26,7 +26,9 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
 
 #### Todo
 
-![Behaviors Progress](https://raw.githubusercontent.com/Dangerbites/METEOR/main/docs/progress.svg)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Dangerbites/METEOR/main/docs/progress.svg" alt="Behaviors Progress">
+</div>
 
 - [x] Empty Objects
 - [x] Life Objects
