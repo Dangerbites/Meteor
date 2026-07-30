@@ -1,0 +1,27 @@
+name: Update Progress Pie Chart
+
+on:
+  push:
+    paths:
+      - 'README.md'
+  workflow_dispatch:   # lets you run it manually from the Actions tab
+
+jobs:
+  update-chart:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # required to push the updated SVG
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate pie chart
+        run: python generate_progress.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/progress.svg
+          git diff --staged --quiet || git commit -m "Update progress pie chart [skip ci]"
+          git push
