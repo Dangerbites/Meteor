@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_48q7h"]
 [ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="2_ml7pp"]
 [ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="3_hwmqh"]
+[ext_resource type="PackedScene" uid="uid://4lhifltxbsow" path="res://objects/Components/collision_detection_component.tscn" id="4_68xm8"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
 size = Vector2(70, 70)
@@ -25,3 +26,5 @@ mouse_filter = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=302168465]
 shape = SubResource("RectangleShape2D_plwxy")
+
+[node name="CollisionDetectionComponent" parent="." unique_id=1827404627 instance=ExtResource("4_68xm8")]

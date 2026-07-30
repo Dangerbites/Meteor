@@ -89,9 +89,27 @@ func _draw_tree(behavior: Dictionary, all_data: Array, status: Dictionary, drawn
 	# behavior function. "##copy_%s" keeps the ID unique per tag, same as
 	# the tree node above; empty label + suffix keeps it visually compact.
 	ImGui.SameLine()
+	#if ImGui.SmallButton("Copy##copy_%s" % tag):
+	#	var method_name = name.replace(" ", "_").replace(".", "_")
+	#	var clip_text = "# tag: %s\nfunc %s(_behavior_data):\n\t_set_behavior_status(_behavior_data[\"tag\"], \"running\")\n\n\t_set_behavior_status(_behavior_data[\"tag\"], \"done\")\n\trun_next_behavior(_behavior_data)" % [tag, method_name]
+	#	DisplayServer.clipboard_set(clip_text)
+
 	if ImGui.SmallButton("Copy##copy_%s" % tag):
 		var method_name = name.replace(" ", "_").replace(".", "_")
-		var clip_text = "# tag: %s\nfunc %s(_behavior_data):\n\t_set_behavior_status(_behavior_data[\"tag\"], \"running\")\n\n\t_set_behavior_status(_behavior_data[\"tag\"], \"done\")\n\trun_next_behavior(_behavior_data)" % [tag, method_name]
+		var clip_text = (
+			"# tag: %s\n" +
+			"func %s(_behavior_data):\n" +
+			"\tif !GlobalBehaviorData.BehaviorStates.has(_behavior_data[\"tag\"]):\n" +
+			"\t\tGlobalBehaviorData.BehaviorStates[_behavior_data[\"tag\"]] = _behavior_data[\"actions\"][\"active\"]\n" +
+			"\n" +
+			"\tif GlobalBehaviorData.BehaviorStates[_behavior_data[\"tag\"]] == false:\n" +
+			"\t\treturn\n" +
+			"\n" +
+			"\t_set_behavior_status(_behavior_data[\"tag\"], \"running\")\n" +
+			"\n" +
+			"\t_set_behavior_status(_behavior_data[\"tag\"], \"done\")\n" +
+			"\trun_next_behavior(_behavior_data)"
+		) % [tag, method_name]
 		DisplayServer.clipboard_set(clip_text)
 
 	if ImGui.IsItemHovered():

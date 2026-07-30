@@ -49,7 +49,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Battery Status
   - [ ] Behavior Bundle
   - [ ] Behaviour Off
-  - [ ] Behaviour On
+  - [x] Behaviour On (Needs Testing)
   - [ ] Bitwise Operation
   - [ ] Boolean
   - [ ] Box Container
@@ -61,6 +61,10 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Combine Text
   - [ ] Comment
   - [ ] Connect to Socket
+  - [x] Collision Event
+    - [x] While Colliding
+    - [x] Started Colliding (Needs to be tested)
+    - [x] Stopped Colliding (Needs to be tested)
   - [ ] Create Collision
   - [x] Destroy Object
   - [ ] Delete from File
@@ -159,6 +163,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Tweet
   - [ ] Value
   - [x] Wait
+  - [x] While Colliding
 
 ## Debugging
 To open the behavior interpreter debugging window press `TAB` to activate it

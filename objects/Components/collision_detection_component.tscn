@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://4lhifltxbsow"]
+
+[ext_resource type="Script" uid="uid://c5qdl6htgxuoe" path="res://objects/Components/collision_detection_component.gd" id="1_52x2c"]
+
+[node name="CollisionDetectionComponent" type="Node" unique_id=1827404627]
+script = ExtResource("1_52x2c")

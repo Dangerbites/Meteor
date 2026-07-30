@@ -61,6 +61,8 @@ func scene_ready() -> void:
 			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
 
 			if has_method(method_name):
+				GlobalBehaviorData.BehaviorStates[behavior["tag"]] = behavior["actions"]["active"]
+
 				var result = call(method_name, behavior)
 				if result is Dictionary:
 					output_store[behavior["tag"]] = result
@@ -195,6 +197,12 @@ func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA"
 # -------- BEHAVIOR FUNCTIONS ------------------------------------------------------------------------------------------
 
 func Timer(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 	if !TIMERS_TO_EXECUTE.has(_behavior_data):
 		TIMERS_TO_EXECUTE.append(_behavior_data)
@@ -203,9 +211,21 @@ func Timer(_behavior_data):
 	run_next_behavior(_behavior_data)
 
 func Timer_v1_33(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	Timer(_behavior_data)
 
 func Frame_Event(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 	if !FRAME_EVENTS_TO_RUN.has(_behavior_data):
 		FRAME_EVENTS_TO_RUN.append(_behavior_data)
@@ -217,6 +237,12 @@ func Frame_Event(_behavior_data):
 
 var _active_move_tweens: Dictionary = {}
 func Move(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions = _behavior_data["actions"]
@@ -276,6 +302,12 @@ func Move(_behavior_data) -> void:
 	run_next_behavior(_behavior_data)
 
 func Wait(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var wait_amount = float(check_value_key(_behavior_data["actions"]["waitTime"]))
@@ -287,6 +319,12 @@ func Wait(_behavior_data) -> void:
 # tag: 80B9B29E-CCC2-4A86-8EA7-9BCEE86A9010
 # tag: 80B9B29E-CCC2-4A86-8EA7-9BCEE86A9010
 func While_Touching(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions: Dictionary = _behavior_data.get("actions", {})
@@ -314,6 +352,12 @@ func While_Touching(_behavior_data):
 	return { "x": mouse_pos.x, "y": flipped_y, "dt": get_physics_process_delta_time() }
 
 func Started_Touching(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	var actions = _behavior_data["actions"]
 	var groups: Array = _behavior_data.get("groups", [])
 
@@ -359,6 +403,12 @@ func Started_Touching(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "done")
 
 func Load_Level(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions = _behavior_data["actions"]
@@ -391,6 +441,12 @@ func Load_Level(_behavior_data) -> void:
 @export var SCALE_METERS_DIVISOR: float = 20.0
 var _active_scale_tweens: Dictionary = {}
 func Scale(_behavior_data: Dictionary) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions = _behavior_data["actions"]
@@ -453,9 +509,21 @@ func Scale(_behavior_data: Dictionary) -> void:
 	run_next_behavior(_behavior_data)
 
 func Scale_v2_7(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	Scale(_behavior_data)
 
 func Show_Layer_v1_26(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var what_layer = check_value_key(_behavior_data["actions"]["index"])
@@ -476,6 +544,12 @@ func Show_Layer_v1_26(_behavior_data):
 
 # tag: 658DD123-B5C1-4F1F-B4B1-0FF35D6BAA67
 func Hide_Layer_v1_26(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var what_layer = check_value_key(_behavior_data["actions"]["index"])
@@ -496,6 +570,12 @@ func Hide_Layer_v1_26(_behavior_data):
 
 
 func Change_Colour(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions = _behavior_data["actions"]
@@ -531,6 +611,12 @@ func Change_Colour(_behavior_data) -> void:
 	run_next_behavior(_behavior_data)
 
 func Destroy_Object(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var target_nodes = get_target_nodes(_behavior_data)
@@ -542,6 +628,12 @@ func Destroy_Object(_behavior_data):
 	run_next_behavior(_behavior_data)
 
 func Play_Sound_v1_21(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions: Dictionary = _behavior_data.get("actions", {})
@@ -589,6 +681,12 @@ func Play_Sound_v1_21(_behavior_data) -> void:
 
 
 func Play_Music_v1_21(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions: Dictionary = _behavior_data.get("actions", {})
@@ -658,6 +756,12 @@ func _run_single_output(target_tag: String) -> void:
 			return
 
 func Execute_Sequence(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions: Dictionary = _behavior_data.get("actions", {})
@@ -723,6 +827,12 @@ func _get_hyperpad_object_size(node: Node2D) -> Vector2:
 	return sprite.texture.get_size() * sprite.scale * node.scale
  
 func Move_To_Object_v1_15(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
  
 	var actions: Dictionary = _behavior_data.get("actions", {})
@@ -803,6 +913,12 @@ func Move_To_Object_v1_15(_behavior_data) -> void:
 	run_next_behavior(_behavior_data)
 
 func Move_To_Point(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions: Dictionary = _behavior_data.get("actions", {})
@@ -876,7 +992,60 @@ func Move_To_Point(_behavior_data) -> void:
 
 # tag: EB52EB92-BA9F-43C6-B477-9706FE6A0D36
 func While_Colliding(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	#return
+
 	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	for node in target_nodes:
+		var collisionComponent = node.get_node("CollisionDetectionComponent")
+		collisionComponent.while_nodes_to_check[self] = _behavior_data
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	#run_next_behavior(_behavior_data)
+
+# tag: 8E5C12FC-6714-4B40-8DED-AA1DBE1D59CD
+func Collision_Event(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	#return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	for node in target_nodes:
+		var collisionComponent = node.get_node("CollisionDetectionComponent")
+		collisionComponent.nodes_to_check[self] = _behavior_data
+
+	#print(_behavior_data["actions"]["collisionEvent"]["value"])
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	#run_next_behavior(_behavior_data)
+
+# tag: 6BB98D4A-8FB0-4067-B5A4-AE9D871A203B
+func Behaviour_On(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var behaviour_A_UUID = _behavior_data["actions"]["behaviourA"]
+	GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
