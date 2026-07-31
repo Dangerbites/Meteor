@@ -595,7 +595,15 @@ func Show_Layer_v1_26(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
-	var what_layer = check_value_key(_behavior_data["actions"]["index"])
+	var actions: Dictionary = _behavior_data.get("actions", {})
+
+	if not actions.has("index"):
+		Console.print_line("Show_Layer_v1_26: no layer configured — skipping (tag %s)" % _behavior_data["tag"])
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	var what_layer = check_value_key(actions["index"])
 
 	if what_layer is float:
 		match what_layer:
@@ -621,7 +629,15 @@ func Hide_Layer_v1_26(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
-	var what_layer = check_value_key(_behavior_data["actions"]["index"])
+	var actions: Dictionary = _behavior_data.get("actions", {})
+
+	if not actions.has("index"):
+		Console.print_line("Hide_Layer_v1_26: no layer configured — skipping (tag %s)" % _behavior_data["tag"])
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	var what_layer = check_value_key(actions["index"])
 
 	if what_layer is float:
 		match what_layer:
