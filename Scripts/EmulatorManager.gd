@@ -186,17 +186,38 @@ func _get_layer_container(layer_key: String, layers: Dictionary) -> Node2D:
 	return container
 
 
+var _is_loading_scene := false
+
 func load_scene(_scene : String = main_scene_name):
+	if _is_loading_scene:
+		push_warning("load_scene: already loading a scene — ignoring re-entrant call for '%s'" % _scene)
+		return
+	_is_loading_scene = true
+
 	_layer_nodes.clear()
 
-	for i in get_tree().current_scene.get_node("GlobalUI").get_children():
+	var global_ui := get_tree().current_scene.get_node("GlobalUI")
+	var scene_root := get_tree().current_scene.get_node("Scene")
+
+	for i in global_ui.get_children():
+		i.queue_free()
+	for i in scene_root.get_children():
 		i.queue_free()
 
-	for i in get_tree().current_scene.get_node("Scene").get_children():
-		i.queue_free()
+	# Wait for queue_free()'d children to actually leave the tree before
+	# spawning new ones - a fixed-duration timer (the old 0.01s wait) is
+	# a race: deferred deletion usually finishes within a frame or two,
+	# but isn't guaranteed to by any fixed wall-clock delay. Polling
+	# child_count back to 0 (bounded, so a stuck node can't hang forever)
+	# is the actual correctness condition we want.
+	var max_wait_frames := 30
+	var waited := 0
+	while (global_ui.get_child_count() > 0 or scene_root.get_child_count() > 0) and waited < max_wait_frames:
+		await get_tree().process_frame
+		waited += 1
 
-	await get_tree().create_timer(0.01).timeout
-	#_layer_nodes.clear()
+	if waited >= max_wait_frames:
+		push_warning("load_scene: timed out waiting for old scene children to free (GlobalUI: %d, Scene: %d remaining)" % [global_ui.get_child_count(), scene_root.get_child_count()])
 
 	var objects
 	var objects_dict = project_json_parsed["Objects"]
@@ -204,17 +225,15 @@ func load_scene(_scene : String = main_scene_name):
 	if objects_dict.has(_scene):
 		objects = objects_dict[_scene]
 	else:
-		objects = objects_dict.get("null", {})  # provide a fallback default if "null" might also be missing
-	
+		objects = objects_dict.get("null", {})
+
 	var SceneSettings = project_json_parsed["SceneSettings"][_scene]
 	var Layers = project_json_parsed["Layers"]
 
-	# SET BACKGROUND COLOR
 	var BackgroundColorData = SceneSettings["background"]["color_rgb"]
 	var BackgroundColor = Color(BackgroundColorData[0], BackgroundColorData[1], BackgroundColorData[2])
 	RenderingServer.set_default_clear_color(BackgroundColor)
 
-	# SET BACKGROUND IMAGE IF AVAILABLE
 	var asset_path = SceneSettings["background"].get("image_path", "")
 
 	if asset_path:
@@ -225,13 +244,13 @@ func load_scene(_scene : String = main_scene_name):
 		var err := image.load(full_path)
 		if err != OK:
 			push_error("Failed to load image: %s (error %s)" % [full_path, err])
+			_is_loading_scene = false
 			return
 
 		get_tree().current_scene.get_node("BG_IMG").texture = ImageTexture.create_from_image(image)
 	else:
 		get_tree().current_scene.get_node("BG_IMG").hide()
 
-	# SPAWN OBJECTS IN SCENE
 	for i in objects:
 		var layer_key = str(int(objects[i]["layer"]))
 		var layer_container = _get_layer_container(layer_key, Layers)
@@ -255,8 +274,8 @@ func load_scene(_scene : String = main_scene_name):
 				clone = LifeIndicatorObject.instantiate() as Node2D
 			_:
 				continue
-				
-		if objects[i].get("gameobjectdata", null): # adding tags to object as godot's "group"
+
+		if objects[i].get("gameobjectdata", null):
 			var tags_array = objects[i]["gameobjectdata"].get("tags", [])
 			if tags_array != []:
 				for tag in tags_array:
@@ -266,8 +285,7 @@ func load_scene(_scene : String = main_scene_name):
 		clone.id = i
 		layer_container.add_child(clone)
 
-
-
+	_is_loading_scene = false
 	finished_loading_level.emit()
 			
 func delete_directory_recursive(path: String) -> bool:

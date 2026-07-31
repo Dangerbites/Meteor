@@ -1,7 +1,10 @@
 extends Node
 
+var Broadcasts = {}   # { behavior_tag: [ {"eventKey": String, "interpreter": Node}, ... ] }
+var Broadcasting = {}
 var BehaviorStates = {}
 var Debug : bool = false
+
 
 func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("tab"):

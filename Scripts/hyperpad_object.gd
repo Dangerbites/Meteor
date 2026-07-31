@@ -7,6 +7,7 @@ var object_data
 var layer : int
 
 func _ready() -> void:
+
 	visible = !object_data["gameobjectdata"]["hidden"]
 
 	#layer = object_data["layer"] 

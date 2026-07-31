@@ -59,7 +59,16 @@ func _draw_tree(behavior: Dictionary, all_data: Array, status: Dictionary, drawn
 	var name = behavior.get("name", "???")
 	var stat = status.get(tag, "idle")
 
-	var color := Color.WHITE
+	# Active/inactive base color - dark gray when the behavior's toggle
+	# state (GlobalBehaviorData.BehaviorStates) is false, white otherwise.
+	# Falls back to true (white) if the tag hasn't been registered yet,
+	# since most behaviors default active until their first run sets this.
+	var is_active: bool = GlobalBehaviorData.BehaviorStates.get(tag, true)
+	var color := Color.WHITE if is_active else Color(0.35, 0.35, 0.35)
+
+	# Status still overrides the active/inactive base color when the
+	# behavior is currently running/done/errored, so you can still see
+	# execution flow even on an otherwise-inactive node.
 	match stat:
 		"running": color = Color.GREEN
 		"done":    color = Color.YELLOW
@@ -83,17 +92,13 @@ func _draw_tree(behavior: Dictionary, all_data: Array, status: Dictionary, drawn
 		ImGui.BeginTooltip()
 		ImGui.Text("Tag: %s" % tag)
 		ImGui.Text("Status: %s" % stat)
+		ImGui.Text("Active: %s" % is_active)
 		ImGui.EndTooltip()
 
 	# Copy button — grabs tag + name so you can paste straight into a new
 	# behavior function. "##copy_%s" keeps the ID unique per tag, same as
 	# the tree node above; empty label + suffix keeps it visually compact.
 	ImGui.SameLine()
-	#if ImGui.SmallButton("Copy##copy_%s" % tag):
-	#	var method_name = name.replace(" ", "_").replace(".", "_")
-	#	var clip_text = "# tag: %s\nfunc %s(_behavior_data):\n\t_set_behavior_status(_behavior_data[\"tag\"], \"running\")\n\n\t_set_behavior_status(_behavior_data[\"tag\"], \"done\")\n\trun_next_behavior(_behavior_data)" % [tag, method_name]
-	#	DisplayServer.clipboard_set(clip_text)
-
 	if ImGui.SmallButton("Copy##copy_%s" % tag):
 		var method_name = name.replace(" ", "_").replace(".", "_")
 		var clip_text = (

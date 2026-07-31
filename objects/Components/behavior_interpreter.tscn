@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://cxq31qme74omi" path="res://Scripts/Components/behavior_interpreter.gd" id="1_aes08"]
 [ext_resource type="Script" uid="uid://dudspx25v4hf8" path="res://objects/Components/debugbehavior.gd" id="2_gf5ge"]
 
-[node name="BehaviorInterpreter" type="Node" unique_id=740618950]
+[node name="BehaviorInterpreter" type="Node" unique_id=740618950 groups=["Interpreter"]]
 script = ExtResource("1_aes08")
 
 [node name="Debugbehavior" type="Node" parent="." unique_id=633528547]

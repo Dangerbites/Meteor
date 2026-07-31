@@ -81,7 +81,56 @@ var output_store: Dictionary = {}
 
 # -------- HELPER BEHAVIOR FUNCTIONS -----------------
 
+# Looks up a behavior by tag anywhere in this interpreter's own
+# behaviorData and runs it directly - same dispatch logic as
+# run_next_behavior/_run_single_output (resolve method name, call it,
+# store dict results, update debug status), just callable standalone
+# with just a UUID instead of needing the full behavior_data dict or
+# an "outputs" list to walk.
+func run_behavior_from_uuid(UUID: String, chain_outputs: bool = false):
+	if behaviorData == null:
+		return null
+
+	for behavior in behaviorData:
+		if behavior["tag"] == UUID:
+			_set_behavior_status(UUID, "running")
+			var behavior_name = behavior.get("name", "no behavior name???")
+			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+
+			if has_method(method_name):
+				var result = call(method_name, behavior)
+				if result is Dictionary:
+					output_store[UUID] = result
+				_set_behavior_status(UUID, "done")
+
+				if chain_outputs:
+					run_next_behavior(behavior)
+
+				return result
+			else:
+				Console.print_line("run_behavior_from_uuid | Warning: No method '%s' found" % method_name)
+				return null
+
+	return null
+
+#func get_node_from_UUID(UUID : String):
+#	for node in get_tree().get_nodes_in_group("HyperpadObject"):
+#		if node.id == UUID:
+#			return node
+#	return null
+
 func get_node_from_UUID(UUID : String):
+	# If the UUID being looked up is this interpreter's own object's ID,
+	# always resolve to self - never search the group. This matters for
+	# clones: many clones can share the same object_data/id, so a group
+	# search for "UUID == this object's own id" would non-deterministically
+	# return whichever instance happens to be first in the tree (usually
+	# the original), even when a clone is the one actually running the
+	# behavior and means itself.
+	var self_object = get_parent()
+	if self_object != null and "id" in self_object and self_object.id == UUID:
+		return self_object
+
 	for node in get_tree().get_nodes_in_group("HyperpadObject"):
 		if node.id == UUID:
 			return node
@@ -176,6 +225,24 @@ func get_action_field(actions: Dictionary, key: String, default_value = 0):
 		return default_value
 	return check_value_key(actions[key])
 
+#func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA") -> Array[Node2D]:
+#	var actions: Dictionary = _behavior_data.get("actions", {})
+#	var targets: Array[Node2D] = []
+#
+#	var groups: Array = _behavior_data.get("groups", [])
+#	if groups != null and not groups.is_empty():
+#		for tag in groups:
+#			for node in get_tree().get_nodes_in_group(tag):
+#				if node is Node2D:
+#					targets.append(node)
+#	else:
+#		var object_id = check_value_key(actions[object_key])
+#		var node = get_node_from_UUID(object_id)
+#		if node != null:
+#			targets.append(node)
+#
+#	return targets
+
 func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA") -> Array[Node2D]:
 	var actions: Dictionary = _behavior_data.get("actions", {})
 	var targets: Array[Node2D] = []
@@ -247,6 +314,8 @@ func Move(_behavior_data) -> void:
 
 	var actions = _behavior_data["actions"]
 	var target_nodes = get_target_nodes(_behavior_data)
+
+	#print("Move called on interpreter for: ", get_parent().name, " (self id: ", get_parent().id, ") -> target_nodes: ", target_nodes)
 
 	if target_nodes.is_empty():
 		Console.print_line("Move: no valid target(s) found")
@@ -619,7 +688,11 @@ func Destroy_Object(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
+	print("Destroy_Object called on interpreter for: ", get_parent().name, " (self id: ", get_parent().id, ")")
+
 	var target_nodes = get_target_nodes(_behavior_data)
+	print("  -> resolved target_nodes: ", target_nodes)
+
 	for node in target_nodes:
 		node.queue_free()
 		print("deleted: %s" % node)
@@ -990,7 +1063,6 @@ func Move_To_Point(_behavior_data) -> void:
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
-# tag: EB52EB92-BA9F-43C6-B477-9706FE6A0D36
 func While_Colliding(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -998,20 +1070,26 @@ func While_Colliding(_behavior_data):
 	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
 		return
 
-	#return
-
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var target_nodes = get_target_nodes(_behavior_data)
 
+	if target_nodes.is_empty():
+		pass
+		#Console.print_line("While_Colliding: no valid target(s) found for tag %s" % _behavior_data["tag"])
+
 	for node in target_nodes:
-		var collisionComponent = node.get_node("CollisionDetectionComponent")
-		collisionComponent.while_nodes_to_check[self] = _behavior_data
+		var collisionComponent = node.get_node_or_null("CollisionDetectionComponent")
+		if collisionComponent == null:
+			#Console.print_line("While_Colliding: %s has no CollisionDetectionComponent" % node.name)
+			continue
+		if not collisionComponent.while_nodes_to_check.has(self):
+			collisionComponent.while_nodes_to_check[self] = []
+		collisionComponent.while_nodes_to_check[self].append(_behavior_data)
+		#print("While_Colliding: registered on ", node.name, " watching for objectB match (tag %s)" % _behavior_data["tag"])
 
 	_set_behavior_status(_behavior_data["tag"], "done")
-	#run_next_behavior(_behavior_data)
 
-# tag: 8E5C12FC-6714-4B40-8DED-AA1DBE1D59CD
 func Collision_Event(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1019,20 +1097,17 @@ func Collision_Event(_behavior_data):
 	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
 		return
 
-	#return
-
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var target_nodes = get_target_nodes(_behavior_data)
 
 	for node in target_nodes:
 		var collisionComponent = node.get_node("CollisionDetectionComponent")
-		collisionComponent.nodes_to_check[self] = _behavior_data
-
-	#print(_behavior_data["actions"]["collisionEvent"]["value"])
+		if not collisionComponent.nodes_to_check.has(self):
+			collisionComponent.nodes_to_check[self] = []
+		collisionComponent.nodes_to_check[self].append(_behavior_data)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
-	#run_next_behavior(_behavior_data)
 
 # tag: 6BB98D4A-8FB0-4067-B5A4-AE9D871A203B
 func Behaviour_On(_behavior_data):
@@ -1045,7 +1120,347 @@ func Behaviour_On(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var behaviour_A_UUID = _behavior_data["actions"]["behaviourA"]
-	GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
+	if GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] == false:
+		GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
+	
+		for interpreter in get_tree().get_nodes_in_group("Interpreter"):
+			interpreter.run_behavior_from_uuid(behaviour_A_UUID)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 3C91ABC7-9629-4EA7-94D5-9697CE04FB54
+func Spawn_On_Point(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var behavior_tag: String = _behavior_data["tag"]
+
+	var object_id = check_value_key(actions["objectA"])
+	var original = get_node_from_UUID(object_id)
+
+	if original == null:
+		Console.print_line("Spawn_On_Point: objectA not found — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var objects_alive_cap = int(get_action_field(actions, "objectsAlive", 20))
+	# Scoped to THIS behavior's own spawns only - a different Spawn On
+	# Point behavior spawning the same template object gets its own
+	# independent count/cap, tracked via the "spawned_by_<behavior tag>"
+	# group rather than sharing "spawned_<template uuid>" across behaviors.
+	var current_alive = _count_alive_clones(behavior_tag)
+
+	if current_alive >= objects_alive_cap:
+		if bool(get_action_field(actions, "recycle", false)):
+			var oldest = _get_oldest_clone(behavior_tag)
+			if oldest != null:
+				oldest.queue_free()
+				current_alive -= 1
+		else:
+			_set_behavior_status(_behavior_data["tag"], "done")
+			run_next_behavior(_behavior_data)
+			return
+
+	var multiplier = int(get_action_field(actions, "multiplier", 1))
+	var screen_coordinates = bool(get_action_field(actions, "screenCoordinates", false))
+
+	var min_x = float(get_action_field(actions, "minAreaX", 0.0))
+	var max_x = float(get_action_field(actions, "maxAreaX", 0.0))
+	var min_y = float(get_action_field(actions, "minAreaY", 0.0))
+	var max_y = float(get_action_field(actions, "maxAreaY", 0.0))
+
+	if min_x > max_x:
+		var tmp = min_x; min_x = max_x; max_x = tmp
+	if min_y > max_y:
+		var tmp = min_y; min_y = max_y; max_y = tmp
+
+	var spread_variance = float(get_action_field(actions, "spreadVariance", 100.0)) / 100.0
+
+	var world_height = get_viewport().get_visible_rect().size.y
+	var camera = get_viewport().get_camera_2d()
+	if camera != null:
+		world_height = get_viewport().get_visible_rect().size.y * camera.zoom.y
+
+	for i in range(max(multiplier, 1)):
+		var rand_x = randf_range(min_x, max_x)
+		var rand_y = randf_range(min_y, max_y)
+
+		if spread_variance < 1.0:
+			var center_x = (min_x + max_x) * 0.5
+			var center_y = (min_y + max_y) * 0.5
+			rand_x = lerp(center_x, rand_x, spread_variance)
+			rand_y = lerp(center_y, rand_y, spread_variance)
+
+		var spawn_position: Vector2
+		if screen_coordinates:
+			spawn_position = Vector2(rand_x, rand_y)
+		else:
+			spawn_position = Vector2(rand_x * 30, world_height - (rand_y * 30))
+
+		var clone = original.duplicate(DUPLICATE_GROUPS | DUPLICATE_SIGNALS | DUPLICATE_SCRIPTS)
+		clone.object_data = original.object_data
+		clone.id = object_id
+		original.get_parent().add_child(clone)
+		clone.global_position = spawn_position
+		clone.global_position.x += 35
+
+		if not clone.is_in_group("HyperpadObject"):
+			clone.add_to_group("HyperpadObject")
+
+		# Kept for anything matching by template UUID (e.g. While_Colliding's
+		# objectB resolution against any clone of this template).
+		clone.add_to_group("spawned_%s" % object_id)
+		# New: scoped to this specific Spawn On Point behavior, so its
+		# objectsAlive cap only counts/recycles its own spawns.
+		clone.add_to_group("spawned_by_%s" % behavior_tag)
+
+		var clone_interpreter = clone.get_node_or_null("BehaviorInterpreter")
+		if clone_interpreter != null and clone_interpreter.has_method("scene_ready"):
+			clone_interpreter.scene_ready()
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+func _count_alive_clones(behavior_tag: String) -> int:
+	return get_tree().get_nodes_in_group("spawned_by_%s" % behavior_tag).size()
+
+func _get_oldest_clone(behavior_tag: String) -> Node2D:
+	var nodes = get_tree().get_nodes_in_group("spawned_by_%s" % behavior_tag)
+	return nodes[0] if not nodes.is_empty() else null
+
+func Add_To_Score(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+	var increment = float(check_value_key(actions["increment"]))
+	var is_infinite = bool(get_action_field(actions, "infinite", true))
+	var max_score = float(get_action_field(actions, "maximumScore", 0.0))
+
+	var reached_max := false
+
+	for node in target_nodes:
+		var label = node.get_node("Label")
+		var current_value = float(label.text) if label.text.is_valid_float() else 0.0
+		var new_value = current_value + increment
+
+		if not is_infinite and new_value >= max_score:
+			new_value = max_score
+			reached_max = true
+
+		# Format as an integer when the result is a whole number, so
+		# "10.0" doesn't display where "10" is expected - falls back to
+		# the raw float string for non-whole increments.
+		if new_value == floor(new_value):
+			label.text = str(int(new_value))
+		else:
+			label.text = str(new_value)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+
+	# Infinite mode: always continue immediately after adding.
+	# Capped mode: only continue once the cap has actually been reached
+	# this call - otherwise stop here and don't fire outputs yet.
+	if is_infinite or reached_max:
+		run_next_behavior(_behavior_data)
+
+# tag: C6644335-6899-4608-8C96-B2149688555D
+func If(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var condition = _behavior_data["actions"]["condition"]["value"]
+	var valueA = get_action_field(_behavior_data["actions"], "valueA", 0)
+	var valueB = get_action_field(_behavior_data["actions"], "valueB", 0)
+
+	print("%s %s %s" % [valueA,condition,valueB])
+
+	match condition:
+		">=":
+			if float(valueA) >= float(valueB):
+				run_next_behavior(_behavior_data)
+		"<=":
+			if float(valueA) <= float(valueB):
+				run_next_behavior(_behavior_data)
+		">":
+			if float(valueA) > float(valueB):
+				run_next_behavior(_behavior_data)
+		"<":
+			if float(valueA) < float(valueB):
+				run_next_behavior(_behavior_data)
+		"=":
+			if str(valueA) == str(valueB):
+				run_next_behavior(_behavior_data)
+		"!=":
+			if str(valueA) != str(valueB):
+				run_next_behavior(_behavior_data)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	#run_next_behavior(_behavior_data)
+
+# tag: B4B8D7ED-2461-4817-9AF1-790270ACFB66
+func Get_Label(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var target_nodes = get_target_nodes(_behavior_data)
+	var result_text := ""
+
+	if target_nodes.is_empty():
+		Console.print_line("Get_Label: no valid target(s) found")
+	else:
+		result_text = target_nodes[0].get_node("Label").text
+
+	# Store the result into this interpreter's own output_store BEFORE
+	# chaining into run_next_behavior, so anything downstream (e.g. an
+	# If check reading this value via check_value_key) sees this call's
+	# fresh text, not whatever was left over from the previous click.
+	output_store[_behavior_data["tag"]] = {"text": result_text}
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return {"text": result_text}
+
+var _broadcasting_keys: Dictionary = {}   # per-interpreter recursion guard
+
+# tag: CBF4184E-0436-42B2-977B-DEE3A1C641F4
+func Broadcast_Message_v1_19(_behavior_data):
+	#run_next_behavior(_behavior_data)
+	#return
+	
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var eventKey = str(get_action_field(_behavior_data["actions"], "eventKey", ""))
+
+	if GlobalBehaviorData.Broadcasting.has(eventKey):
+		# Already broadcasting this exact eventKey somewhere up the call
+		# stack - stop here instead of recursing forever.
+		Console.print_line("Broadcast_Message_v1_19: cycle detected for eventKey '%s' — skipping" % eventKey)
+		_set_behavior_status(_behavior_data["tag"], "done")
+		return
+
+	GlobalBehaviorData.Broadcasting[eventKey] = true
+
+	for receiver_tag in GlobalBehaviorData.Broadcasts:
+		for entry in GlobalBehaviorData.Broadcasts[receiver_tag]:
+			if entry["eventKey"] == eventKey:
+				var interpreter = entry["interpreter"]
+				if is_instance_valid(interpreter):
+					interpreter.run_behavior_from_uuid(receiver_tag, true)
+
+	GlobalBehaviorData.Broadcasting.erase(eventKey)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 43B758A9-8B3F-4CCD-8818-DB9E1AB63CFE
+func Receive_Message_v1_19(_behavior_data):
+	#run_next_behavior(_behavior_data)
+	#return
+
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var eventKey = str(get_action_field(_behavior_data["actions"], "eventKey", ""))
+	var tag = _behavior_data["tag"]
+
+	if not GlobalBehaviorData.Broadcasts.has(tag):
+		GlobalBehaviorData.Broadcasts[tag] = []
+
+	# Don't re-append if this exact interpreter is already registered for
+	# this tag - prevents duplicate entries piling up if Receive_Message
+	# ever gets called more than once (e.g. re-triggered by its own
+	# broadcast chain), which would otherwise multiply how many times
+	# each future broadcast fires this receiver.
+	var already_registered := false
+	for entry in GlobalBehaviorData.Broadcasts[tag]:
+		if entry["interpreter"] == self:
+			already_registered = true
+			entry["eventKey"] = eventKey  # keep it in sync if eventKey changed
+			break
+
+	if not already_registered:
+		GlobalBehaviorData.Broadcasts[tag].append({"eventKey": eventKey, "interpreter": self})
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+
+# tag: ECD5D5DB-EA1E-4FDD-BF70-3FBDD8765990
+func Set_Graphic_v1_26(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Set_Graphic_v1_26: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	var graphic_path = str(actions.get("graphic", ""))
+
+	if graphic_path == "":
+		Console.print_line("Set_Graphic_v1_26: no graphic path configured — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var full_path = TapAssetExtractor.get_asset_user_path(graphic_path)
+	var image := Image.new()
+	var err := image.load(full_path)
+
+	if err != OK:
+		Console.print_line("Set_Graphic_v1_26: failed to load image '%s' (error %s)" % [full_path, err])
+		run_next_behavior(_behavior_data)
+		return
+
+	var new_texture := ImageTexture.create_from_image(image)
+
+	for node in target_nodes:
+		var sprite := node.get_node_or_null("Sprite2D") as Sprite2D
+		if sprite == null:
+			Console.print_line("Set_Graphic_v1_26: %s has no Sprite2D child" % node.name)
+			continue
+		sprite.texture = new_texture
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)

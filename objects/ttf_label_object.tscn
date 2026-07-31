@@ -6,7 +6,7 @@
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
 
-[node name="TTFLabelObject" type="RigidBody2D" unique_id=1572347920]
+[node name="TTFLabelObject" type="RigidBody2D" unique_id=1572347920 groups=["HyperpadObject"]]
 freeze = true
 script = ExtResource("1_yp6bn")
 

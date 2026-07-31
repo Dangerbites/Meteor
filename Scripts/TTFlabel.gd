@@ -32,6 +32,9 @@ func _ready() -> void:
 		# read this control's *actual* resulting size rather than reading
 		# a "dimensions" value that doesn't exist for this object_type.
 		call_deferred("_apply_bmfont_position")
+
+		global_position += Vector2(5, 22)
+		size.x += 40
 	else:
 		if object_data["asset_path"] == "included_assets/UI/Fonts/Helvetica/Helvetica":
 			add_theme_font_override("normal_font", load("res://helvetica-255/Helvetica.ttf"))

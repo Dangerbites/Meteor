@@ -48,6 +48,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Joystick
   - [ ] Labels
 - [ ] Behaviors
+  - [x] Add To Score
   - [ ] Array
   - [ ] Authenticate OAuth
   - [ ] Battery Status
@@ -58,6 +59,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Boolean
   - [ ] Box Container
   - [ ] Broadcast Message
+  - [x] Broadcast Message v1.19
   - [ ] Calculate Direction
   - [ ] Calculate Distance
   - [ ] Clamp Value
@@ -89,6 +91,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Get Background
   - [ ] Get Bounding Box
   - [ ] Get Dictionary Value
+  - [x] Get Label
   - [ ] Get Life Indicator
   - [ ] Get Mouse Position
   - [ ] Get Noise Value
@@ -100,7 +103,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Get Time
   - [ ] HTTP Request
   - [ ] HitPoint Test
-  - [ ] If
+  - [x] If
   - [ ] Indicator Event
   - [ ] Interpolate Value
   - [ ] Is Intersecting
@@ -132,6 +135,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Random Number
   - [ ] Raycast Test
   - [ ] Receive Message
+  - [x] Receive Message v1.19
   - [ ] Remove OAuth Credentials
   - [ ] Render Texture
   - [ ] Round Number
@@ -142,6 +146,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Set Behavior State
   - [ ] Set Cursor Style
   - [x] Set Color
+  - [x] Set Graphic v1.26
   - [ ] Set Music Settings
   - [ ] Set Physics Mode
   - [ ] Set Physics Property
@@ -153,6 +158,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Socket.io Client
   - [ ] Sort Array
   - [ ] Sort by Distance
+  - [x] Spawn On Area
   - [ ] Start Trail
   - [x] Started Touching
   - [ ] Stop Visual Effects
@@ -173,6 +179,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
 To open the behavior interpreter debugging window press `TAB` to activate it
 
 This is used to check if behaviors are being ran properly and to debug. Letting you get the behaviors `TAG UUID` and copy its function name for implimentation.
+
+`F2` Displays FPS
 
 ## Developer Console
 Meteor includes a developer console for debugging and extra useful features. Press `~` to activate it
