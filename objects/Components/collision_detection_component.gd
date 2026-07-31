@@ -15,7 +15,7 @@ func _ready() -> void:
 		return
 	parent.freeze_mode = RigidBody2D.FREEZE_MODE_KINEMATIC
 	parent.contact_monitor = true
-	parent.max_contacts_reported = 99
+	parent.max_contacts_reported = 64
 	parent.body_entered.connect(_on_parent_body_entered)
 	parent.body_exited.connect(_on_parent_body_exited)
 

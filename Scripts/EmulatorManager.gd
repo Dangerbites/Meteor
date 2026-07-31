@@ -23,16 +23,31 @@ var expected_output_path: String = ""
 var recent_projects = []
 signal project_loaded(tap_path)
 
-# Only third-party (non-stdlib) import in hyperpad_convert3.py - the rest
-# (json, os, plistlib, re, sqlite3, tempfile, zipfile) ship with any
-# standard Python install and don't need a pip check.
 const REQUIRED_PIP_PACKAGES := ["av"]
+
+# Every user://-copied Python script that should match its res:// source
+# exactly. Checked on startup so a hand-edited or stale copy (e.g. from
+# an older app version) gets flagged instead of silently misbehaving.
+const TRACKED_PYTHON_SCRIPTS := [
+	"hyperpad_convert3.py",
+	"m4a_to_ogg.py",
+	"check_av.py",
+]
+
+# Accumulated warning lines for this session - each failed check appends
+# one entry here instead of overwriting the label, so multiple problems
+# (missing Python, missing package, edited scripts) all show at once.
+var _warning_log: Array[String] = []
 
 func _ready() -> void:
 	ensure_check_script_in_user_folder()
 	ensure_hyperpad_convert_in_user_folder()
 	ensure_m4a_converter_in_user_folder()
+
 	check_python_environment()
+	check_tracked_scripts_unmodified()
+
+	_refresh_warn_label()
 
 	get_window().files_dropped.connect(_on_files_dropped)
 
@@ -43,49 +58,62 @@ func _ready() -> void:
 func _get_warn_label() -> RichTextLabel:
 	return get_tree().current_scene.get_node("%warn") as RichTextLabel
 
-func _set_warn_text(text: String) -> void:
+## Appends one warning entry to the log. Does NOT touch the label directly -
+## call _refresh_warn_label() (or let check_python_environment /
+## check_tracked_scripts_unmodified do it) once all checks for this pass
+## have run, so every issue found this session shows together.
+func _log_warning(text: String) -> void:
+	_warning_log.append(text)
+
+## Rebuilds the %warn label's full text from _warning_log. If the log is
+## empty, hides the label instead of showing an empty box.
+func _refresh_warn_label() -> void:
 	var warn_label := _get_warn_label()
 	if warn_label == null:
-		push_warning("check_python_environment: no '%%warn' node found to display message")
+		push_warning("_refresh_warn_label: no '%%warn' node found to display messages")
 		return
-	warn_label.text = text
-	warn_label.show()
 
-func _clear_warn_text() -> void:
-	var warn_label := _get_warn_label()
-	if warn_label != null:
+	if _warning_log.is_empty():
 		warn_label.text = ""
 		warn_label.hide()
+		return
+
+	# Number each entry and separate with a rule so multiple stacked
+	# warnings read as a log, not a wall of run-together text.
+	var lines: Array[String] = []
+	for i in _warning_log.size():
+		lines.append("[b]%d.[/b] %s" % [i + 1, _warning_log[i]])
+
+	warn_label.text = "\n\n".join(lines)
+	warn_label.show()
 
 ## Verifies Python is on PATH and that hyperpad_convert3.py's one
-## third-party dependency (the "av" package) is importable, then writes
-## a clear message + ready-to-paste pip command into the "%warn" label
-## if either check fails. Does nothing (and hides the label) if both
-## checks pass.
+## third-party dependency (the "av" package) is importable. Appends a
+## warning for each failed check rather than stopping at the first one,
+## so "no Python" and "no av" (which can't both be meaningfully checked
+## if Python itself is missing) don't hide each other - if Python isn't
+## found at all, the av check is skipped since it can't run anyway.
 func check_python_environment() -> void:
 	var python_cmd = "py" if OS.has_feature("windows") else "python3"
 
-	# --- Check 1: is Python on PATH? ---
 	var version_output := []
 	var version_exit := OS.execute(python_cmd, ["--version"], version_output, true)
 	if version_exit != 0:
-		_set_warn_text(
+		_log_warning(
 			"[color=red][b]Python not found[/b][/color]\n" +
-			"'%s' is not on your PATH, or Python isn't installed.\n" % python_cmd +
-			"Install Python from https://python.org and make sure to check " +
+			"'%s' is not on your PATH, or Python isn't installed. " % python_cmd +
+			"Install Python from https://python.org and check " +
 			"\"Add Python to PATH\" during setup, then restart this app."
 		)
-		return
+		return  # Can't run the av check without Python at all.
 
-	# --- Check 2: run check_av.py (must already be in user://) ---
 	var user_dir = OS.get_user_data_dir()
 	var check_script_path = user_dir.path_join("check_av.py")
 
-	# In case the script hasn't been copied yet (should be done in _ready)
 	if not FileAccess.file_exists(check_script_path):
-		_set_warn_text(
+		_log_warning(
 			"[color=red][b]Check script missing[/b][/color]\n" +
-			"%s not found. Please restart the app to regenerate it." % check_script_path
+			"%s not found. Restart the app to regenerate it." % check_script_path
 		)
 		return
 
@@ -93,18 +121,53 @@ func check_python_environment() -> void:
 	var check_exit := OS.execute(python_cmd, [check_script_path], check_output, true)
 
 	if check_exit != 0:
-		# The script prints the error details to stdout – show them
 		var details = "\n".join(check_output)
-		_set_warn_text(
+		_log_warning(
 			"[color=red][b]Missing Python package(s)[/b][/color]\n" +
 			"The check script reported:\n%s\n\n" % details +
 			"Run this command, then restart this app:\n" +
 			"[code]%s -m pip install av[/code]" % python_cmd
 		)
-		return
 
-	# Everything is fine
-	_clear_warn_text()
+## Compares every user://-copied script in TRACKED_PYTHON_SCRIPTS against
+## its res:// source byte-for-byte. Appends one warning per mismatched
+## file (not one combined warning), so if e.g. two of three scripts were
+## edited, both show as separate log entries.
+func check_tracked_scripts_unmodified() -> void:
+	var user_dir = OS.get_user_data_dir()
+
+	for script_name in TRACKED_PYTHON_SCRIPTS:
+		var source_path = "res://%s" % script_name
+		var user_path = user_dir.path_join(script_name)
+
+		if not FileAccess.file_exists(source_path):
+			# Nothing to compare against - not a user-side problem, skip silently.
+			continue
+		if not FileAccess.file_exists(user_path):
+			# ensure_*_in_user_folder() should have created this already;
+			# if it's still missing that's its own failure mode, not a
+			# "modified" one, so don't report it here.
+			continue
+
+		var source_file = FileAccess.open(source_path, FileAccess.READ)
+		var user_file = FileAccess.open(user_path, FileAccess.READ)
+
+		if source_file == null or user_file == null:
+			continue
+
+		var source_content = source_file.get_as_text()
+		var user_content = user_file.get_as_text()
+		source_file.close()
+		user_file.close()
+
+		if source_content != user_content:
+			_log_warning(
+				"[color=orange][b]%s has been modified[/b][/color]\n" % script_name +
+				"Your copy in the user data folder no longer matches this app's version, " +
+				"which can cause outdated or broken behavior.\n" +
+				"Please delete the Python files in your user data folder " +
+				"[press F1 to open the folder] and restart Meteor."
+			)
 
 func _on_files_dropped(files: PackedStringArray):
 	for file_path in files:
@@ -147,20 +210,23 @@ func _run_converter(tap_path: String):
 		print("Waiting for generation to finish...")
 
 func _process(_delta):
-	# Monitor the Python script process
 	if converter_pid != -1:
 		if not OS.is_process_running(converter_pid):
 			print("Python converter finished!")
-			converter_pid = -1 # Reset the PID so this doesn't run twice
+			converter_pid = -1
 			
-			# Verify the file was actually created before starting
 			if FileAccess.file_exists(expected_output_path):
 				start_emulating()
 			else:
 				push_error("Error: Converter finished but game.json was not found!")
 
-	# Standard input processing
 	if Input.is_action_just_pressed("open_user_folder"):
+		var user_path = ProjectSettings.globalize_path("user://")
+		OS.shell_open(user_path)
+
+	# F1 opens the user data folder - referenced in the "modified scripts"
+	# warning text above, so it needs to actually do that.
+	if Input.is_action_just_pressed("ui_help") or Input.is_key_pressed(KEY_F1):
 		var user_path = ProjectSettings.globalize_path("user://")
 		OS.shell_open(user_path)
 
@@ -172,10 +238,8 @@ func start_emulating():
 
 	var path = ProjectSettings.globalize_path("user://" + project_json)
 
-	# Grab the ProgressUI node (adjust path to your actual scene)
 	var progress_ui = get_tree().current_scene.get_node("ProgressUI")
 	
-	# Start extraction – it will update the bar every file and yield every 5 files.
 	await TapAssetExtractor.extract_tap_assets_non_blocking(
 		emulated_tap, true, true, progress_ui
 	)
@@ -218,33 +282,17 @@ func _get_layer_container(layer_key: String, layers: Dictionary) -> Node2D:
 	var layer_info = layers[layer_key]
 	var container := Node2D.new()
 
-	# Name the container after the layer's UUID (falling back to the
-	# Z_PK-based layer_key for layers with no UUID, e.g. default/unnamed
-	# editor layers) so it can be found by name and so Show_Layer /
-	# Hide_Layer's UUID-based lookup has a stable, human-inspectable name
-	# to match against in the scene tree / remote debugger.
 	var layer_uuid = layer_info.get("uuid", null)
 	container.name = str(layer_uuid) if layer_uuid != null else "Layer_%s" % layer_key
 
-	#print("Created layer container: key=", layer_key, " uuid=", layer_uuid, " name=", container.name)
-
 	container.add_to_group("hyperpadLayer")
 
-	# ZINDEX is inverted relative to Godot's z_index: in hyperPad, a
-	# HIGHER z_order sits further BACK, while Godot's z_index is the
-	# opposite (higher = further front). Negate it here rather than
-	# changing what the exporter reports, since z_order there is a
-	# faithful passthrough of the raw column - the inversion is a
-	# hyperPad-vs-Godot convention difference, not a data error.
 	container.z_index = -int(layer_info["z_order"])
 	container.z_as_relative = true
 
 	var parent_name = "GlobalUI" if layer_info["ui_layer"] else "Scene"
 	get_tree().current_scene.get_node(parent_name).add_child(container)
 
-	# Apply the layer's own hidden state up front, so a layer marked
-	# hidden in the editor starts hidden instead of every object inside
-	# it needing its own individual visibility/alpha toggled to fake it.
 	if layer_info.get("hidden", false):
 		container.hide()
 
@@ -255,6 +303,8 @@ func _get_layer_container(layer_key: String, layers: Dictionary) -> Node2D:
 var _is_loading_scene := false
 
 func load_scene(_scene : String = main_scene_name):
+	get_tree().current_scene.get_node("%warn").hide()
+
 	if _is_loading_scene:
 		push_warning("load_scene: already loading a scene — ignoring re-entrant call for '%s'" % _scene)
 		return
@@ -270,12 +320,6 @@ func load_scene(_scene : String = main_scene_name):
 	for i in scene_root.get_children():
 		i.queue_free()
 
-	# Wait for queue_free()'d children to actually leave the tree before
-	# spawning new ones - a fixed-duration timer (the old 0.01s wait) is
-	# a race: deferred deletion usually finishes within a frame or two,
-	# but isn't guaranteed to by any fixed wall-clock delay. Polling
-	# child_count back to 0 (bounded, so a stuck node can't hang forever)
-	# is the actual correctness condition we want.
 	var max_wait_frames := 30
 	var waited := 0
 	while (global_ui.get_child_count() > 0 or scene_root.get_child_count() > 0) and waited < max_wait_frames:
@@ -372,7 +416,6 @@ func delete_directory_recursive(path: String) -> bool:
 		file_name = dir.get_next()
 	dir.list_dir_end()
 
-	# Now that it's empty, remove the folder itself.
 	var parent_dir := DirAccess.open(path.get_base_dir())
 	if parent_dir:
 		var err := parent_dir.remove(path.get_file())
@@ -385,18 +428,15 @@ func ensure_hyperpad_convert_in_user_folder() -> void:
 	var user_dir = OS.get_user_data_dir()
 	var target_path = user_dir.path_join("hyperpad_convert3.py")
 
-	# Already there? Nothing to do.
 	if FileAccess.file_exists(target_path):
 		print("hyperpad_convert3.py already exists in user folder.")
 		return
 
-	# Source path inside the project's resources.
 	var source_path = "res://hyperpad_convert3.py"
 	if not FileAccess.file_exists(source_path):
 		push_error("Source file not found: " + source_path)
 		return
 
-	# Read the whole file.
 	var source_file = FileAccess.open(source_path, FileAccess.READ)
 	if source_file == null:
 		push_error("Failed to open source file: " + source_path)
@@ -405,7 +445,6 @@ func ensure_hyperpad_convert_in_user_folder() -> void:
 	var content = source_file.get_as_text()
 	source_file.close()
 
-	# Write it to the user folder.
 	var target_file = FileAccess.open(target_path, FileAccess.WRITE)
 	if target_file == null:
 		push_error("Failed to create target file: " + target_path)
@@ -438,18 +477,15 @@ func ensure_m4a_converter_in_user_folder() -> void:
 	var user_dir = OS.get_user_data_dir()
 	var target_path = user_dir.path_join("m4a_to_ogg.py")
 
-	# Already there? Nothing to do.
 	if FileAccess.file_exists(target_path):
 		print("m4a_to_ogg.py already exists in user folder.")
 		return
 
-	# Source path inside the project's resources.
 	var source_path = "res://m4a_to_ogg.py"
 	if not FileAccess.file_exists(source_path):
 		push_error("Source file not found: " + source_path)
 		return
 
-	# Read the whole file.
 	var source_file = FileAccess.open(source_path, FileAccess.READ)
 	if source_file == null:
 		push_error("Failed to open source file: " + source_path)
@@ -458,7 +494,6 @@ func ensure_m4a_converter_in_user_folder() -> void:
 	var content = source_file.get_as_text()
 	source_file.close()
 
-	# Write it to the user folder.
 	var target_file = FileAccess.open(target_path, FileAccess.WRITE)
 	if target_file == null:
 		push_error("Failed to create target file: " + target_path)

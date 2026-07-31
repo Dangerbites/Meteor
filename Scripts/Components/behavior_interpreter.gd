@@ -113,20 +113,10 @@ func run_behavior_from_uuid(UUID: String, chain_outputs: bool = false):
 
 	return null
 
-#func get_node_from_UUID(UUID : String):
-#	for node in get_tree().get_nodes_in_group("HyperpadObject"):
-#		if node.id == UUID:
-#			return node
-#	return null
-
 func get_node_from_UUID(UUID : String):
-	# If the UUID being looked up is this interpreter's own object's ID,
-	# always resolve to self - never search the group. This matters for
-	# clones: many clones can share the same object_data/id, so a group
-	# search for "UUID == this object's own id" would non-deterministically
-	# return whichever instance happens to be first in the tree (usually
-	# the original), even when a clone is the one actually running the
-	# behavior and means itself.
+	if not is_inside_tree():
+		return null
+
 	var self_object = get_parent()
 	if self_object != null and "id" in self_object and self_object.id == UUID:
 		return self_object
@@ -163,7 +153,6 @@ func _process(_delta: float) -> void:
 		if timer_elapsed[tag] >= wait_time:
 			timer_elapsed[tag] -= wait_time
 			run_next_behavior(behavior)
-			#print(wait_time)
 
 			if not _behavior_repeats(behavior):
 				timers_to_remove.append(behavior)
@@ -225,25 +214,10 @@ func get_action_field(actions: Dictionary, key: String, default_value = 0):
 		return default_value
 	return check_value_key(actions[key])
 
-#func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA") -> Array[Node2D]:
-#	var actions: Dictionary = _behavior_data.get("actions", {})
-#	var targets: Array[Node2D] = []
-#
-#	var groups: Array = _behavior_data.get("groups", [])
-#	if groups != null and not groups.is_empty():
-#		for tag in groups:
-#			for node in get_tree().get_nodes_in_group(tag):
-#				if node is Node2D:
-#					targets.append(node)
-#	else:
-#		var object_id = check_value_key(actions[object_key])
-#		var node = get_node_from_UUID(object_id)
-#		if node != null:
-#			targets.append(node)
-#
-#	return targets
-
 func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA") -> Array[Node2D]:
+	if not is_inside_tree():
+		return []
+
 	var actions: Dictionary = _behavior_data.get("actions", {})
 	var targets: Array[Node2D] = []
 
@@ -254,7 +228,7 @@ func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA"
 				if node is Node2D:
 					targets.append(node)
 	else:
-		var object_id = check_value_key(actions[object_key])
+		var object_id = str(check_value_key(actions[object_key]))
 		var node = get_node_from_UUID(object_id)
 		if node != null:
 			targets.append(node)
@@ -314,8 +288,6 @@ func Move(_behavior_data) -> void:
 
 	var actions = _behavior_data["actions"]
 	var target_nodes = get_target_nodes(_behavior_data)
-
-	#print("Move called on interpreter for: ", get_parent().name, " (self id: ", get_parent().id, ") -> target_nodes: ", target_nodes)
 
 	if target_nodes.is_empty():
 		Console.print_line("Move: no valid target(s) found")
@@ -386,7 +358,6 @@ func Wait(_behavior_data) -> void:
 	run_next_behavior(_behavior_data)
 
 # tag: 80B9B29E-CCC2-4A86-8EA7-9BCEE86A9010
-# tag: 80B9B29E-CCC2-4A86-8EA7-9BCEE86A9010
 func While_Touching(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -397,7 +368,7 @@ func While_Touching(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var actions: Dictionary = _behavior_data.get("actions", {})
-	var object_id = check_value_key(actions["objectA"])
+	var object_id = str(check_value_key(actions["objectA"]))
 	var object_to_touch = get_node_from_UUID(object_id) as RigidBody2D
 
 	if object_to_touch == null:
@@ -431,9 +402,14 @@ func Started_Touching(_behavior_data):
 	var groups: Array = _behavior_data.get("groups", [])
 
 	if groups == null or groups.is_empty():
-		var object_id = check_value_key(actions["objectA"])
+		var object_id = str(check_value_key(actions["objectA"]))
 		var object_to_touch = get_node_from_UUID(object_id) as RigidBody2D
-		var touch_component = object_to_touch.get_node("touchingComponent")
+
+		if object_to_touch == null:
+			Console.print_line("Started_Touching: objectA not found (%s) — skipping" % object_id)
+			return
+
+		var touch_component = object_to_touch.get_node_or_null("touchingComponent")
 
 		if touch_component == null:
 			Console.print_line("Started_Touching: no touchingComponent on %s" % object_id)
@@ -462,7 +438,7 @@ func Started_Touching(_behavior_data):
 			if node == null:
 				continue
 
-			var touch_component = node.get_node("touchingComponent")
+			var touch_component = node.get_node_or_null("touchingComponent")
 			if touch_component == null:
 				Console.print_line("Started_Touching: no touchingComponent on %s" % object_uuid)
 				continue
@@ -825,9 +801,6 @@ func Play_Music_v1_21(_behavior_data):
 # tag: D385F638-0839-42ED-BB5B-757C00CE14B2
 var _execute_sequence_index: Dictionary = {}   # { behavior_tag: int } - next output index for Sequential mode
 
-# Runs exactly one specific behavior by tag (not every entry in "outputs"
-# like run_next_behavior does) - same dispatch logic (find by tag, resolve
-# method name, call, store dict results), just aimed at a single target.
 func _run_single_output(target_tag: String) -> void:
 	for behavior in behaviorData:
 		if behavior["tag"] == target_tag:
@@ -867,36 +840,19 @@ func Execute_Sequence(_behavior_data):
 		var target_tag = outputs[randi() % outputs.size()]
 		_run_single_output(target_tag)
 	else:  # "Sequential" (default)
-		print("pressed?")
 		var current_index: int = _execute_sequence_index.get(self_tag, 0)
-		# Clamp in case the outputs list shrank since the index was last saved.
 		current_index = current_index % outputs.size()
 
 		var target_tag = outputs[current_index]
 		_run_single_output(target_tag)
 
-		# Advance and loop back to 0 after the last output.
 		_execute_sequence_index[self_tag] = (current_index + 1) % outputs.size()
 
 	_set_behavior_status(self_tag, "done")
-	# Deliberately no run_next_behavior() call here: "outputs" on an
-	# Execute Sequence behaviour IS the list of branches to choose between,
-	# not a set of things to all run afterward - the chosen branch's own
-	# outputs (if any) continue the chain from inside _run_single_output.
 
 # tag: 8D0BECA2-6877-49C6-BC73-B62FAE70E810
 @export var MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE: float = 1.0
- 
-# Prefer CollisionShape2D for the object's bounding size - it's a single
-# authoritative value Godot already computed, rather than reconstructing
-# it from texture pixels. The texture-based fallback below is kept for
-# objects with no collision shape, but it previously had a real bug:
-# it multiplied by sprite.scale only and ignored the RigidBody2D root's
-# OWN scale (node.scale) - confirmed via debug print, size_b came out as
-# (1080, 810) when the correct size (accounting for node_b.scale of
-# ~0.28 on top of sprite_b.scale of 0.5) is closer to (303, 227). Godot
-# multiplies a child's rendered size by every ancestor's scale, so both
-# factors are required, not just the sprite's own.
+
 func _get_hyperpad_object_size(node: Node2D) -> Vector2:
 	var collision_shape := node.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if collision_shape != null and collision_shape.shape != null:
@@ -909,12 +865,12 @@ func _get_hyperpad_object_size(node: Node2D) -> Vector2:
 		elif shape is CapsuleShape2D:
 			var capsule := shape as CapsuleShape2D
 			return Vector2(capsule.radius * 2.0, capsule.height) * collision_shape.scale * node.scale
- 
+
 	var sprite := node.get_node_or_null("Sprite2D") as Sprite2D
 	if sprite == null or sprite.texture == null:
 		return Vector2.ZERO
 	return sprite.texture.get_size() * sprite.scale * node.scale
- 
+
 func Move_To_Object_v1_15(_behavior_data) -> void:
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -923,29 +879,20 @@ func Move_To_Object_v1_15(_behavior_data) -> void:
 		return
 
 	_set_behavior_status(_behavior_data["tag"], "running")
- 
+
 	var actions: Dictionary = _behavior_data.get("actions", {})
- 
-	var object_a_id = check_value_key(actions["objectA"])
-	var object_b_id = check_value_key(actions["objectB"])
- 
+
+	var object_a_id = str(check_value_key(actions["objectA"]))
+	var object_b_id = str(check_value_key(actions["objectB"]))
+
 	var node_a = get_node_from_UUID(object_a_id)
 	var node_b = get_node_from_UUID(object_b_id)
- 
+
 	if node_a == null or node_b == null:
 		Console.print_line("Move_To_Object_v1_15: objectA or objectB not found — skipping")
 		run_next_behavior(_behavior_data)
 		return
- 
-	# relativeAnchorA/B_x/y are 0-100 percentages locating a point within
-	# each object's own bounding box (50/50 = center). X maps directly
-	# (both hyperPad/cocos2d and Godot go left-to-right, 0 at left).
-	# Y is FLIPPED: hyperPad/cocos2d use a bottom-left origin (Y-up, so
-	# Y=100% is the visual TOP), while Godot uses top-left origin (Y-down,
-	# so a Y of 1.0 in local space is the visual BOTTOM). Confirmed against
-	# a real hyperPad reference: relativeAnchorB_y of 99.97% places the
-	# anchor at the object's top edge, not its bottom - without the flip,
-	# the same value was landing at the bottom instead.
+
 	var relative_a = Vector2(
 		float(get_action_field(actions, "relativeAnchorA_x", 50.0)),
 		100.0 - float(get_action_field(actions, "relativeAnchorA_y", 50.0))
@@ -954,26 +901,16 @@ func Move_To_Object_v1_15(_behavior_data) -> void:
 		float(get_action_field(actions, "relativeAnchorB_x", 50.0)),
 		100.0 - float(get_action_field(actions, "relativeAnchorB_y", 50.0))
 	) / 100.0
- 
+
 	var size_a: Vector2 = _get_hyperpad_object_size(node_a)
 	var size_b: Vector2 = _get_hyperpad_object_size(node_b)
- 
-	# relative_* is 0.5/0.5 at center - subtract that so the anchor is
-	# expressed as an offset FROM the object's origin (which Sprite2D
-	# renders centered on by default), not from its top-left corner.
+
 	var anchor_a_local = (relative_a - Vector2(0.5, 0.5)) * size_a
 	var anchor_b_local = (relative_b - Vector2(0.5, 0.5)) * size_b
- 
+
 	var anchor_a_global = node_a.global_position + anchor_a_local
 	var anchor_b_global = node_b.global_position + anchor_b_local
- 
-	# anchorA/B_x/y are added directly onto the computed target position
-	# (not transformed through local space/rotation) - anchorA_x/y often
-	# aren't even present in the JSON when an object uses the plain
-	# default center anchor with no custom offset. MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE
-	# lets the strength of this offset be dialed in without touching the
-	# formula - 1.0 = raw value as read from the JSON, unverified against
-	# real hyperPad output.
+
 	var offset_a = Vector2(
 		float(get_action_field(actions, "anchorA_x", 0.0)),
 		float(get_action_field(actions, "anchorA_y", 0.0))
@@ -982,22 +919,22 @@ func Move_To_Object_v1_15(_behavior_data) -> void:
 		float(get_action_field(actions, "anchorB_x", 0.0)),
 		float(get_action_field(actions, "anchorB_y", 0.0))
 	) * MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE
- 
+
 	var move_delta = (anchor_b_global + offset_b) - (anchor_a_global + offset_a)
 	var target_position = node_a.global_position + move_delta
- 
+
 	var duration = float(get_action_field(actions, "duration", 0.0))
- 
+
 	if duration <= 0.0:
 		node_a.global_position = target_position
 	else:
 		var tween = create_tween()
 		tween.tween_property(node_a, "global_position", target_position, duration)
 		await tween.finished
- 
+
 	if not is_instance_valid(self):
 		return
- 
+
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
@@ -1026,11 +963,6 @@ func Move_To_Point(_behavior_data) -> void:
 	var raw_x = float(get_action_field(actions, "moveX", 0.0))
 	var raw_y = float(get_action_field(actions, "moveY", 0.0))
 
-	# World-space height of the visible play area, in the same Godot units
-	# the *30 conversion produces. Used to shift hyperPad's bottom-left
-	# origin (0,0 = bottom-left, Y-up) onto Godot's top-left origin
-	# (0,0 = top-left, Y-down) - a pure Y-negate isn't enough on its own,
-	# since that flips direction but not the origin point itself.
 	var world_height = get_viewport().get_visible_rect().size.y
 	var camera = get_viewport().get_camera_2d()
 	if camera != null:
@@ -1040,17 +972,9 @@ func Move_To_Point(_behavior_data) -> void:
 	if screen_coordinates:
 		target_position = Vector2(raw_x, raw_y)
 	elif is_chained:
-		# raw_y here is Y-up (flipped by While_Touching using screen
-		# height) - convert back to Godot's native Y-down global space.
 		var screen_height = get_viewport().get_visible_rect().size.y
 		target_position = Vector2(raw_x, screen_height - raw_y)
 	else:
-		# Manually-typed "Absolute Position (m)": *30 scales hyperPad's
-		# meter units into Godot units, then world_height - (raw_y * 30)
-		# shifts the origin from hyperPad's bottom-left to Godot's
-		# top-left, so hyperPad's (0,0) (bottom-left) correctly lands at
-		# the bottom of the visible area instead of Godot's native (0,0)
-		# (top-left).
 		target_position = Vector2(raw_x * 30, world_height - (raw_y * 30))
 
 	var duration = float(get_action_field(actions, "duration", 0.0))
@@ -1090,19 +1014,13 @@ func While_Colliding(_behavior_data):
 
 	var target_nodes = get_target_nodes(_behavior_data)
 
-	if target_nodes.is_empty():
-		pass
-		#Console.print_line("While_Colliding: no valid target(s) found for tag %s" % _behavior_data["tag"])
-
 	for node in target_nodes:
 		var collisionComponent = node.get_node_or_null("CollisionDetectionComponent")
 		if collisionComponent == null:
-			#Console.print_line("While_Colliding: %s has no CollisionDetectionComponent" % node.name)
 			continue
 		if not collisionComponent.while_nodes_to_check.has(self):
 			collisionComponent.while_nodes_to_check[self] = []
 		collisionComponent.while_nodes_to_check[self].append(_behavior_data)
-		#print("While_Colliding: registered on ", node.name, " watching for objectB match (tag %s)" % _behavior_data["tag"])
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 
@@ -1138,7 +1056,7 @@ func Behaviour_On(_behavior_data):
 	var behaviour_A_UUID = _behavior_data["actions"]["behaviourA"]
 	if GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] == false:
 		GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
-	
+
 		for interpreter in get_tree().get_nodes_in_group("Interpreter"):
 			interpreter.run_behavior_from_uuid(behaviour_A_UUID)
 
@@ -1158,7 +1076,7 @@ func Spawn_On_Point(_behavior_data):
 	var actions: Dictionary = _behavior_data.get("actions", {})
 	var behavior_tag: String = _behavior_data["tag"]
 
-	var object_id = check_value_key(actions["objectA"])
+	var object_id = str(check_value_key(actions["objectA"]))
 	var original = get_node_from_UUID(object_id)
 
 	if original == null:
@@ -1167,10 +1085,6 @@ func Spawn_On_Point(_behavior_data):
 		return
 
 	var objects_alive_cap = int(get_action_field(actions, "objectsAlive", 20))
-	# Scoped to THIS behavior's own spawns only - a different Spawn On
-	# Point behavior spawning the same template object gets its own
-	# independent count/cap, tracked via the "spawned_by_<behavior tag>"
-	# group rather than sharing "spawned_<template uuid>" across behaviors.
 	var current_alive = _count_alive_clones(behavior_tag)
 
 	if current_alive >= objects_alive_cap:
@@ -1230,11 +1144,7 @@ func Spawn_On_Point(_behavior_data):
 		if not clone.is_in_group("HyperpadObject"):
 			clone.add_to_group("HyperpadObject")
 
-		# Kept for anything matching by template UUID (e.g. While_Colliding's
-		# objectB resolution against any clone of this template).
 		clone.add_to_group("spawned_%s" % object_id)
-		# New: scoped to this specific Spawn On Point behavior, so its
-		# objectsAlive cap only counts/recycles its own spawns.
 		clone.add_to_group("spawned_by_%s" % behavior_tag)
 
 		var clone_interpreter = clone.get_node_or_null("BehaviorInterpreter")
@@ -1277,9 +1187,6 @@ func Add_To_Score(_behavior_data):
 			new_value = max_score
 			reached_max = true
 
-		# Format as an integer when the result is a whole number, so
-		# "10.0" doesn't display where "10" is expected - falls back to
-		# the raw float string for non-whole increments.
 		if new_value == floor(new_value):
 			label.text = str(int(new_value))
 		else:
@@ -1287,9 +1194,6 @@ func Add_To_Score(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 
-	# Infinite mode: always continue immediately after adding.
-	# Capped mode: only continue once the cap has actually been reached
-	# this call - otherwise stop here and don't fire outputs yet.
 	if is_infinite or reached_max:
 		run_next_behavior(_behavior_data)
 
@@ -1306,8 +1210,6 @@ func If(_behavior_data):
 	var condition = _behavior_data["actions"]["condition"]["value"]
 	var valueA = get_action_field(_behavior_data["actions"], "valueA", 0)
 	var valueB = get_action_field(_behavior_data["actions"], "valueB", 0)
-
-	print("%s %s %s" % [valueA,condition,valueB])
 
 	match condition:
 		">=":
@@ -1330,7 +1232,6 @@ func If(_behavior_data):
 				run_next_behavior(_behavior_data)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
-	#run_next_behavior(_behavior_data)
 
 # tag: B4B8D7ED-2461-4817-9AF1-790270ACFB66
 func Get_Label(_behavior_data):
@@ -1350,10 +1251,6 @@ func Get_Label(_behavior_data):
 	else:
 		result_text = target_nodes[0].get_node("Label").text
 
-	# Store the result into this interpreter's own output_store BEFORE
-	# chaining into run_next_behavior, so anything downstream (e.g. an
-	# If check reading this value via check_value_key) sees this call's
-	# fresh text, not whatever was left over from the previous click.
 	output_store[_behavior_data["tag"]] = {"text": result_text}
 
 	_set_behavior_status(_behavior_data["tag"], "done")
@@ -1361,13 +1258,10 @@ func Get_Label(_behavior_data):
 
 	return {"text": result_text}
 
-var _broadcasting_keys: Dictionary = {}   # per-interpreter recursion guard
+var _broadcasting_keys: Dictionary = {}
 
 # tag: CBF4184E-0436-42B2-977B-DEE3A1C641F4
 func Broadcast_Message_v1_19(_behavior_data):
-	#run_next_behavior(_behavior_data)
-	#return
-	
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
 
@@ -1379,8 +1273,6 @@ func Broadcast_Message_v1_19(_behavior_data):
 	var eventKey = str(get_action_field(_behavior_data["actions"], "eventKey", ""))
 
 	if GlobalBehaviorData.Broadcasting.has(eventKey):
-		# Already broadcasting this exact eventKey somewhere up the call
-		# stack - stop here instead of recursing forever.
 		Console.print_line("Broadcast_Message_v1_19: cycle detected for eventKey '%s' — skipping" % eventKey)
 		_set_behavior_status(_behavior_data["tag"], "done")
 		return
@@ -1401,9 +1293,6 @@ func Broadcast_Message_v1_19(_behavior_data):
 
 # tag: 43B758A9-8B3F-4CCD-8818-DB9E1AB63CFE
 func Receive_Message_v1_19(_behavior_data):
-	#run_next_behavior(_behavior_data)
-	#return
-
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
 
@@ -1418,16 +1307,11 @@ func Receive_Message_v1_19(_behavior_data):
 	if not GlobalBehaviorData.Broadcasts.has(tag):
 		GlobalBehaviorData.Broadcasts[tag] = []
 
-	# Don't re-append if this exact interpreter is already registered for
-	# this tag - prevents duplicate entries piling up if Receive_Message
-	# ever gets called more than once (e.g. re-triggered by its own
-	# broadcast chain), which would otherwise multiply how many times
-	# each future broadcast fires this receiver.
 	var already_registered := false
 	for entry in GlobalBehaviorData.Broadcasts[tag]:
 		if entry["interpreter"] == self:
 			already_registered = true
-			entry["eventKey"] = eventKey  # keep it in sync if eventKey changed
+			entry["eventKey"] = eventKey
 			break
 
 	if not already_registered:
