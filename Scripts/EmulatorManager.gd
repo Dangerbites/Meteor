@@ -17,23 +17,94 @@ var project_json_parsed
 var main_scene_name := ""
 var debug_move_speed : float = 500
 
-# NEW: Variables to track the Python converter process
 var converter_pid: int = -1
 var expected_output_path: String = ""
 
 var recent_projects = []
 signal project_loaded(tap_path)
 
-func _ready() -> void:
+# Only third-party (non-stdlib) import in hyperpad_convert3.py - the rest
+# (json, os, plistlib, re, sqlite3, tempfile, zipfile) ship with any
+# standard Python install and don't need a pip check.
+const REQUIRED_PIP_PACKAGES := ["av"]
 
+func _ready() -> void:
+	ensure_check_script_in_user_folder()
 	ensure_hyperpad_convert_in_user_folder()
 	ensure_m4a_converter_in_user_folder()
+	check_python_environment()
 
 	get_window().files_dropped.connect(_on_files_dropped)
 
 	#console commands
 	Console.add_command("loadScene", load_scene, ["Scene Name"])
 	Console.add_command("getSceneNames", get_scene_names,)
+
+func _get_warn_label() -> RichTextLabel:
+	return get_tree().current_scene.get_node("%warn") as RichTextLabel
+
+func _set_warn_text(text: String) -> void:
+	var warn_label := _get_warn_label()
+	if warn_label == null:
+		push_warning("check_python_environment: no '%%warn' node found to display message")
+		return
+	warn_label.text = text
+	warn_label.show()
+
+func _clear_warn_text() -> void:
+	var warn_label := _get_warn_label()
+	if warn_label != null:
+		warn_label.text = ""
+		warn_label.hide()
+
+## Verifies Python is on PATH and that hyperpad_convert3.py's one
+## third-party dependency (the "av" package) is importable, then writes
+## a clear message + ready-to-paste pip command into the "%warn" label
+## if either check fails. Does nothing (and hides the label) if both
+## checks pass.
+func check_python_environment() -> void:
+	var python_cmd = "py" if OS.has_feature("windows") else "python3"
+
+	# --- Check 1: is Python on PATH? ---
+	var version_output := []
+	var version_exit := OS.execute(python_cmd, ["--version"], version_output, true)
+	if version_exit != 0:
+		_set_warn_text(
+			"[color=red][b]Python not found[/b][/color]\n" +
+			"'%s' is not on your PATH, or Python isn't installed.\n" % python_cmd +
+			"Install Python from https://python.org and make sure to check " +
+			"\"Add Python to PATH\" during setup, then restart this app."
+		)
+		return
+
+	# --- Check 2: run check_av.py (must already be in user://) ---
+	var user_dir = OS.get_user_data_dir()
+	var check_script_path = user_dir.path_join("check_av.py")
+
+	# In case the script hasn't been copied yet (should be done in _ready)
+	if not FileAccess.file_exists(check_script_path):
+		_set_warn_text(
+			"[color=red][b]Check script missing[/b][/color]\n" +
+			"%s not found. Please restart the app to regenerate it." % check_script_path
+		)
+		return
+
+	var check_output := []
+	var check_exit := OS.execute(python_cmd, [check_script_path], check_output, true)
+
+	if check_exit != 0:
+		# The script prints the error details to stdout – show them
+		var details = "\n".join(check_output)
+		_set_warn_text(
+			"[color=red][b]Missing Python package(s)[/b][/color]\n" +
+			"The check script reported:\n%s\n\n" % details +
+			"Run this command, then restart this app:\n" +
+			"[code]%s -m pip install av[/code]" % python_cmd
+		)
+		return
+
+	# Everything is fine
+	_clear_warn_text()
 
 func _on_files_dropped(files: PackedStringArray):
 	for file_path in files:
@@ -54,22 +125,17 @@ func _run_converter(tap_path: String):
 
 	var script_dir = OS.get_user_data_dir()
 	
-	# Build the full paths
 	var script_path = script_dir.path_join("hyperpad_convert3.py")
 	expected_output_path = script_dir.path_join(project_json)
 
-	# Debug: print the path to confirm it's correct
 	print("Looking for Python script at: ", script_path)
 
-	# Check if the script exists
 	if not FileAccess.file_exists(script_path):
 		push_error("Error: Python script not found at: " + script_path)
 		return
 
-	# Choose Python executable
 	var python_cmd = "py" if OS.has_feature("windows") else "python3"
 
-	# Run the converter in the background (non-blocking)
 	var args = PackedStringArray([script_path, tap_path, expected_output_path])
 	converter_pid = OS.create_process(python_cmd, args)
 
@@ -348,6 +414,25 @@ func ensure_hyperpad_convert_in_user_folder() -> void:
 	target_file.store_string(content)
 	target_file.close()
 	print("Copied hyperpad_convert3.py to user folder.")
+
+func ensure_check_script_in_user_folder() -> void:
+	var user_dir = OS.get_user_data_dir()
+	var target_path = user_dir.path_join("check_av.py")
+
+	if FileAccess.file_exists(target_path):
+		return
+	var source_path = "res://check_av.py"
+	var source_file = FileAccess.open(source_path, FileAccess.READ)
+	if source_file == null:
+		push_error("Source file not found: " + source_path)
+		return
+	var content = source_file.get_as_text()
+	source_file.close()
+
+	var target_file = FileAccess.open(target_path, FileAccess.WRITE)
+	target_file.store_string(content)
+	target_file.close()
+	print("Copied check_av.py to user folder.")
 
 func ensure_m4a_converter_in_user_folder() -> void:
 	var user_dir = OS.get_user_data_dir()

@@ -9,6 +9,9 @@
 [ext_resource type="PackedScene" uid="uid://cd5ei1i4xugop" path="res://objects/ProgressUI.tscn" id="5_tbgi4"]
 [ext_resource type="Texture2D" uid="uid://fo7w3n2gn08p" path="res://ipad.png" id="6_tefeu"]
 [ext_resource type="PackedScene" uid="uid://b73pvungc6eqh" path="res://objects/debug_ui.tscn" id="9_85g3d"]
+[ext_resource type="FontFile" uid="uid://dv12mbq4k6xf5" path="res://helvetica-255/Helvetica-Bold.ttf" id="9_eb6dy"]
+[ext_resource type="FontFile" uid="uid://drslp1b6prf84" path="res://helvetica-255/Helvetica-BoldOblique.ttf" id="10_trceg"]
+[ext_resource type="FontFile" uid="uid://slcks6evcrvh" path="res://helvetica-255/Helvetica-Oblique.ttf" id="11_a8y0u"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85g3d"]
 content_margin_left = 32.0
@@ -47,6 +50,17 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eb6dy"]
+bg_color = Color(0, 0, 0, 0.6039216)
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+expand_margin_left = 10.0
+expand_margin_top = 10.0
+expand_margin_right = 10.0
+expand_margin_bottom = 10.0
 
 [node name="MAIN" type="Node2D" unique_id=1002170495]
 
@@ -163,6 +177,32 @@ title = "Open a File"
 file_mode = 0
 access = 2
 use_native_dialog = true
+
+[node name="warn" type="RichTextLabel" parent="GayUI" unique_id=1107033661]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -433.0
+offset_top = -169.0
+offset_right = 433.0
+offset_bottom = 169.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 2
+mouse_default_cursor_shape = 8
+theme_override_fonts/normal_font = ExtResource("1_o6xl0")
+theme_override_fonts/bold_font = ExtResource("9_eb6dy")
+theme_override_fonts/bold_italics_font = ExtResource("10_trceg")
+theme_override_fonts/italics_font = ExtResource("11_a8y0u")
+theme_override_fonts/mono_font = ExtResource("1_o6xl0")
+theme_override_styles/normal = SubResource("StyleBoxFlat_eb6dy")
+theme_override_styles/focus = SubResource("StyleBoxFlat_eb6dy")
+bbcode_enabled = true
+text = "bla bla bla"
+selection_enabled = true
 
 [node name="DebugUI" parent="." unique_id=1682261412 instance=ExtResource("9_85g3d")]
 
