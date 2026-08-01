@@ -22,6 +22,7 @@ var expected_output_path: String = ""
 
 var recent_projects = []
 signal project_loaded(tap_path)
+signal project_finishing_loading(tap_path)
 
 const REQUIRED_PIP_PACKAGES := ["av"]
 
@@ -258,6 +259,7 @@ func start_emulating():
 		return
 
 	project_json_parsed = json
+	project_finishing_loading.emit(expected_output_path)
 
 	var scene_map = json["SceneMap"]
 	print(scene_map)
@@ -506,6 +508,9 @@ func ensure_m4a_converter_in_user_folder() -> void:
 # -------------------------
 # DEVELOPER CONSOLE FUNCTIONS
 
-func get_scene_names() -> void:
+func get_scene_names():
+	var obtained_scenes = []
 	for i in project_json_parsed["Scenes"]:
+		obtained_scenes.append(i["name"])
 		Console.print_line(i["name"])
+	return obtained_scenes

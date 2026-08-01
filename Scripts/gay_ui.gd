@@ -7,16 +7,24 @@ func _update_recent_projects(_tap_path):
 	$MenuBar/PopupMenu/PopupMenu.clear()
 	for x in EmulatorManager.recent_projects:
 		$MenuBar/PopupMenu/PopupMenu.add_item(x)
+		
+func _update_scenes(_tap_path):
+	$MenuBar/PopupMenu2/PopupMenu.clear()
+	for x in EmulatorManager.get_scene_names():
+		$MenuBar/PopupMenu2/PopupMenu.add_item(x)
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	_load_recent_projects()
-
+	
+	EmulatorManager.project_finishing_loading.connect(_update_scenes)
 	EmulatorManager.project_loaded.connect(_update_recent_projects)
 	EmulatorManager.project_loaded.connect(_on_project_loaded_save)
 
 	$MenuBar/PopupMenu.add_item("Open TAP")
 	$MenuBar/PopupMenu.add_submenu_item("Recent TAPs", "PopupMenu")
+	
+	$MenuBar/PopupMenu2.add_submenu_item("Load Scene", "PopupMenu")
 
 	_update_recent_projects(null)
 
@@ -71,3 +79,6 @@ func _load_recent_projects() -> void:
 	var loaded = config.get_value("recent_taps", "paths", [])
 	if loaded is Array:
 		EmulatorManager.recent_projects = loaded.slice(0, RECENT_TAPS_MAX)
+
+func _load_scene_id_pressed(id: int) -> void:
+	EmulatorManager.load_scene($MenuBar/PopupMenu2/PopupMenu.get_item_text(id))

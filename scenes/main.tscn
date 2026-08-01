@@ -172,6 +172,52 @@ theme_override_styles/separator = SubResource("StyleBoxFlat_o6xl0")
 theme_override_styles/labeled_separator_left = SubResource("StyleBoxFlat_o6xl0")
 theme_override_styles/labeled_separator_right = SubResource("StyleBoxFlat_o6xl0")
 
+[node name="PopupMenu2" type="PopupMenu" parent="GayUI/MenuBar" unique_id=517103179]
+oversampling_override = 1.0
+title = "Tools"
+size = Vector2i(410, 91)
+visible = true
+theme = SubResource("Theme_o6xl0")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_accelerator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/v_separation = 12
+theme_override_fonts/font = ExtResource("1_o6xl0")
+theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_separator_size = 5
+theme_override_styles/panel = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/hover = SubResource("StyleBoxFlat_tipki")
+theme_override_styles/separator = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_left = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_right = SubResource("StyleBoxFlat_o6xl0")
+
+[node name="PopupMenu" type="PopupMenu" parent="GayUI/MenuBar/PopupMenu2" unique_id=1822230804]
+oversampling_override = 1.0
+title = "File"
+size = Vector2i(410, 91)
+visible = true
+theme = SubResource("Theme_o6xl0")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_accelerator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_colors/font_separator_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/v_separation = 12
+theme_override_fonts/font = ExtResource("1_o6xl0")
+theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_separator_size = 5
+theme_override_styles/panel = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/hover = SubResource("StyleBoxFlat_tipki")
+theme_override_styles/separator = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_left = SubResource("StyleBoxFlat_o6xl0")
+theme_override_styles/labeled_separator_right = SubResource("StyleBoxFlat_o6xl0")
+
 [node name="OpenTapFileDialog" type="FileDialog" parent="GayUI" unique_id=474783667]
 title = "Open a File"
 file_mode = 0
@@ -208,4 +254,6 @@ selection_enabled = true
 
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu" to="GayUI" method="_on_file_menu_id_pressed"]
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu/PopupMenu" to="GayUI" method="_recent_project_id_pressed"]
+[connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu2" to="GayUI" method="_on_file_menu_id_pressed"]
+[connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu2/PopupMenu" to="GayUI" method="_load_scene_id_pressed"]
 [connection signal="file_selected" from="GayUI/OpenTapFileDialog" to="GayUI" method="_on_open_tap_file_dialog_file_selected"]
