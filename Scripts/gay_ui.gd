@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const RECENT_TAPS_MAX: int = 10
+const RECENT_TAPS_MAX: int = 25
 const RECENT_TAPS_SAVE_PATH := "user://recent_taps.cfg"
 
 func _update_recent_projects(_tap_path):

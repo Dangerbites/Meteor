@@ -1,5 +1,23 @@
 extends Node
 
+
+# profiling for performance issues
+var _prof_run_next_calls := 0
+var _prof_run_next_time_us := 0
+var _prof_get_target_calls := 0
+var _prof_get_target_time_us := 0
+var _prof_get_uuid_calls := 0
+var _prof_get_uuid_scan_fallbacks := 0
+var _prof_timer_us
+var _prof_report_interval := 1.0
+var _prof_elapsed := 0.0
+
+func _profiled_run_next_behavior(_behavior_data) -> void:
+	var t0 = Time.get_ticks_usec()
+	run_next_behavior(_behavior_data)
+	_prof_run_next_time_us += Time.get_ticks_usec() - t0
+	_prof_run_next_calls += 1
+
 # DEBUG
 static var behavior_status := {}   # { tag: "idle" | "running" | "done" | "error" }
 
@@ -41,6 +59,12 @@ func _get_ease(ease_action: int) -> Array:
 var object_data
 var behaviorData
 
+# tag -> behavior dict, built once per scene_ready() instead of every
+# run_next_behavior/_run_single_output/run_behavior_from_uuid call doing
+# a linear scan through behaviorData - critical for objects with 300+
+# behaviors, which turned every dispatch into an O(n) scan.
+var _behavior_by_tag: Dictionary = {}
+
 func _ready() -> void:
 	EmulatorManager.finished_loading_level.connect(scene_ready)
 
@@ -51,11 +75,13 @@ func scene_ready() -> void:
 
 	behaviorData = EmulatorManager.project_json_parsed["Behaviours"][get_parent().id]
 
+	_behavior_by_tag.clear()
+	for behavior in behaviorData:
+		_behavior_by_tag[behavior["tag"]] = behavior
+
 	for behavior in behaviorData:
 		var behavior_name = behavior.get("name", "no behavior name???")
 		var is_root = behavior.get("root", 0)
-
-		Console.print_line("'%s'" % behavior_name)
 
 		if is_root == 1:
 			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
@@ -81,39 +107,35 @@ var output_store: Dictionary = {}
 
 # -------- HELPER BEHAVIOR FUNCTIONS -----------------
 
-# Looks up a behavior by tag anywhere in this interpreter's own
-# behaviorData and runs it directly - same dispatch logic as
-# run_next_behavior/_run_single_output (resolve method name, call it,
-# store dict results, update debug status), just callable standalone
-# with just a UUID instead of needing the full behavior_data dict or
-# an "outputs" list to walk.
 func run_behavior_from_uuid(UUID: String, chain_outputs: bool = false):
 	if behaviorData == null:
 		return null
 
-	for behavior in behaviorData:
-		if behavior["tag"] == UUID:
-			_set_behavior_status(UUID, "running")
-			var behavior_name = behavior.get("name", "no behavior name???")
-			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+	var behavior = _behavior_by_tag.get(UUID)
+	if behavior == null:
+		return null
 
-			if has_method(method_name):
-				var result = call(method_name, behavior)
-				if result is Dictionary:
-					output_store[UUID] = result
-				_set_behavior_status(UUID, "done")
+	_set_behavior_status(UUID, "running")
+	var behavior_name = behavior.get("name", "no behavior name???")
+	var method_name = behavior_name.replace(" ", "_").replace(".", "_")
 
-				if chain_outputs:
-					run_next_behavior(behavior)
+	if has_method(method_name):
+		var result = call(method_name, behavior)
+		if result is Dictionary:
+			output_store[UUID] = result
+		_set_behavior_status(UUID, "done")
 
-				return result
-			else:
-				Console.print_line("run_behavior_from_uuid | Warning: No method '%s' found" % method_name)
-				return null
+		if chain_outputs:
+			run_next_behavior(behavior)
 
-	return null
+		return result
+	else:
+		Console.print_line("run_behavior_from_uuid | Warning: No method '%s' found" % method_name)
+		return null
 
 func get_node_from_UUID(UUID : String):
+	GlobalBehaviorData.prof_get_uuid_calls += 1
+
 	if not is_inside_tree():
 		return null
 
@@ -121,8 +143,14 @@ func get_node_from_UUID(UUID : String):
 	if self_object != null and "id" in self_object and self_object.id == UUID:
 		return self_object
 
+	var cached = GlobalBehaviorData.uuid_registry.get(UUID)
+	if cached != null and is_instance_valid(cached):
+		return cached
+
+	GlobalBehaviorData.prof_get_uuid_scan_fallbacks += 1
 	for node in get_tree().get_nodes_in_group("HyperpadObject"):
 		if node.id == UUID:
+			GlobalBehaviorData.register_uuid(UUID, node)
 			return node
 	return null
 
@@ -163,37 +191,46 @@ func _process(_delta: float) -> void:
 	for frame_event in FRAME_EVENTS_TO_RUN:
 		var get_next_behavior_id: Array = frame_event.get("actions", {}).get("outputs", [])
 
-		for behavior in behaviorData:
-			for id in get_next_behavior_id:
-				if behavior["tag"] == id:
+		for id in get_next_behavior_id:
+			var behavior = _behavior_by_tag.get(id)
+			if behavior == null:
+				continue
 
-					var behavior_name = behavior.get("name", "no behavior name???")
-					var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+			var behavior_name = behavior.get("name", "no behavior name???")
+			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
 
-					if has_method(method_name):
-						var result = call(method_name, behavior)
-						if result is Dictionary:
-							output_store[behavior["tag"]] = result
-					else:
-						Console.print_line("FRAME_EVENTS_TO_RUN | Warning: No method '%s' found" % method_name)
+			if has_method(method_name):
+				var result = call(method_name, behavior)
+				if result is Dictionary:
+					output_store[behavior["tag"]] = result
+			else:
+				Console.print_line("FRAME_EVENTS_TO_RUN | Warning: No method '%s' found" % method_name)
 
 func run_next_behavior(_behavior_data) -> void:
+	var _t0 = Time.get_ticks_usec()
+	GlobalBehaviorData.prof_run_next_calls += 1
+
 	var get_next_behavior_id: Array = _behavior_data.get("actions", {}).get("outputs", [])
 
-	for behavior in behaviorData:
-		for id in get_next_behavior_id:
-			if behavior["tag"] == id:
-				_set_behavior_status(id, "running")
-				var behavior_name = behavior.get("name", "no behavior name???")
-				var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+	for id in get_next_behavior_id:
+		var behavior = _behavior_by_tag.get(id)
+		if behavior == null:
+			continue
 
-				if has_method(method_name):
-					var result = call(method_name, behavior)
-					if result is Dictionary:
-						output_store[behavior["tag"]] = result
-					_set_behavior_status(id, "done")
-				else:
-					Console.print_line("run_next_behavior | Warning: No method '%s' found" % method_name)
+		_set_behavior_status(id, "running")
+		var behavior_name = behavior.get("name", "no behavior name???")
+		var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+
+		if has_method(method_name):
+			GlobalBehaviorData.prof_record_call(behavior_name, behavior.get("tag", "no tag"))
+			var result = call(method_name, behavior)
+			if result is Dictionary:
+				output_store[behavior["tag"]] = result
+			_set_behavior_status(id, "done")
+		else:
+			Console.print_line("run_next_behavior | Warning: No method '%s' found" % method_name)
+
+	GlobalBehaviorData.prof_run_next_time_us += Time.get_ticks_usec() - _t0
 
 func check_value_key(value_key_data):
 	if value_key_data["valueKey"] == "$null":
@@ -206,7 +243,6 @@ func check_value_key(value_key_data):
 	if source_outputs.has(key):
 		return source_outputs[key]
 	else:
-		Console.print_line("check_value_key | Warning: no output '%s' from '%s' yet, using 0" % [key, behavior_tag])
 		return 0.0
 
 func get_action_field(actions: Dictionary, key: String, default_value = 0):
@@ -215,6 +251,9 @@ func get_action_field(actions: Dictionary, key: String, default_value = 0):
 	return check_value_key(actions[key])
 
 func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA") -> Array[Node2D]:
+	var _t0 = Time.get_ticks_usec()
+	GlobalBehaviorData.prof_get_target_calls += 1
+
 	if not is_inside_tree():
 		return []
 
@@ -233,6 +272,7 @@ func get_target_nodes(_behavior_data: Dictionary, object_key: String = "objectA"
 		if node != null:
 			targets.append(node)
 
+	GlobalBehaviorData.prof_get_target_time_us += Time.get_ticks_usec() - _t0
 	return targets
 
 # -------- BEHAVIOR FUNCTIONS ------------------------------------------------------------------------------------------
@@ -305,6 +345,7 @@ func Move(_behavior_data) -> void:
 	var all_tweens: Array[Tween] = []
 
 	for node in target_nodes:
+		GlobalBehaviorData.prof_move_unique_targets[node.get_instance_id()] = true
 		var target_position = node.global_position + offset
 		var node_key = node.get_instance_id()
 
@@ -375,7 +416,7 @@ func While_Touching(_behavior_data):
 		Console.print_line("While_Touching: objectA not found — skipping")
 		return
 
-	var touch_component = object_to_touch.get_node("touchingComponent")
+	var touch_component = object_to_touch.get_node_or_null("touchingComponent")
 	if touch_component == null:
 		Console.print_line("While_Touching: no touchingComponent on %s" % object_id)
 		return
@@ -680,14 +721,10 @@ func Destroy_Object(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
-	print("Destroy_Object called on interpreter for: ", get_parent().name, " (self id: ", get_parent().id, ")")
-
 	var target_nodes = get_target_nodes(_behavior_data)
-	print("  -> resolved target_nodes: ", target_nodes)
 
 	for node in target_nodes:
 		node.queue_free()
-		print("deleted: %s" % node)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
@@ -798,24 +835,24 @@ func Play_Music_v1_21(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
-# tag: D385F638-0839-42ED-BB5B-757C00CE14B2
-var _execute_sequence_index: Dictionary = {}   # { behavior_tag: int } - next output index for Sequential mode
+var _execute_sequence_index: Dictionary = {}
 
 func _run_single_output(target_tag: String) -> void:
-	for behavior in behaviorData:
-		if behavior["tag"] == target_tag:
-			_set_behavior_status(target_tag, "running")
-			var behavior_name = behavior.get("name", "no behavior name???")
-			var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+	var behavior = _behavior_by_tag.get(target_tag)
+	if behavior == null:
+		return
 
-			if has_method(method_name):
-				var result = call(method_name, behavior)
-				if result is Dictionary:
-					output_store[target_tag] = result
-				_set_behavior_status(target_tag, "done")
-			else:
-				Console.print_line("_run_single_output | Warning: No method '%s' found" % method_name)
-			return
+	_set_behavior_status(target_tag, "running")
+	var behavior_name = behavior.get("name", "no behavior name???")
+	var method_name = behavior_name.replace(" ", "_").replace(".", "_")
+
+	if has_method(method_name):
+		var result = call(method_name, behavior)
+		if result is Dictionary:
+			output_store[target_tag] = result
+		_set_behavior_status(target_tag, "done")
+	else:
+		Console.print_line("_run_single_output | Warning: No method '%s' found" % method_name)
 
 func Execute_Sequence(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
@@ -839,7 +876,7 @@ func Execute_Sequence(_behavior_data):
 	if sequence_type == "Random":
 		var target_tag = outputs[randi() % outputs.size()]
 		_run_single_output(target_tag)
-	else:  # "Sequential" (default)
+	else:
 		var current_index: int = _execute_sequence_index.get(self_tag, 0)
 		current_index = current_index % outputs.size()
 
@@ -850,7 +887,6 @@ func Execute_Sequence(_behavior_data):
 
 	_set_behavior_status(self_tag, "done")
 
-# tag: 8D0BECA2-6877-49C6-BC73-B62FAE70E810
 @export var MOVE_TO_OBJECT_ANCHOR_OFFSET_SCALE: float = 1.0
 
 func _get_hyperpad_object_size(node: Node2D) -> Vector2:
@@ -1006,21 +1042,23 @@ func Move_To_Point(_behavior_data) -> void:
 func While_Colliding(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
-
 	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
 		return
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
-	var target_nodes = get_target_nodes(_behavior_data)
+	# Get my own collision component (the object that has this behavior)
+	var my_parent = get_parent()
+	var my_component = my_parent.get_node_or_null("CollisionDetectionComponent")
+	if my_component == null:
+		Console.print_line("While_Colliding: missing CollisionDetectionComponent on self")
+		run_next_behavior(_behavior_data)
+		return
 
-	for node in target_nodes:
-		var collisionComponent = node.get_node_or_null("CollisionDetectionComponent")
-		if collisionComponent == null:
-			continue
-		if not collisionComponent.while_nodes_to_check.has(self):
-			collisionComponent.while_nodes_to_check[self] = []
-		collisionComponent.while_nodes_to_check[self].append(_behavior_data)
+	# Register on MY component, not on the target's
+	if not my_component.while_nodes_to_check.has(self):
+		my_component.while_nodes_to_check[self] = []
+	my_component.while_nodes_to_check[self].append(_behavior_data)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 
@@ -1197,7 +1235,6 @@ func Add_To_Score(_behavior_data):
 	if is_infinite or reached_max:
 		run_next_behavior(_behavior_data)
 
-# tag: C6644335-6899-4608-8C96-B2149688555D
 func If(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1233,7 +1270,6 @@ func If(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 
-# tag: B4B8D7ED-2461-4817-9AF1-790270ACFB66
 func Get_Label(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1260,7 +1296,6 @@ func Get_Label(_behavior_data):
 
 var _broadcasting_keys: Dictionary = {}
 
-# tag: CBF4184E-0436-42B2-977B-DEE3A1C641F4
 func Broadcast_Message_v1_19(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1273,7 +1308,6 @@ func Broadcast_Message_v1_19(_behavior_data):
 	var eventKey = str(get_action_field(_behavior_data["actions"], "eventKey", ""))
 
 	if GlobalBehaviorData.Broadcasting.has(eventKey):
-		Console.print_line("Broadcast_Message_v1_19: cycle detected for eventKey '%s' — skipping" % eventKey)
 		_set_behavior_status(_behavior_data["tag"], "done")
 		return
 
@@ -1291,7 +1325,6 @@ func Broadcast_Message_v1_19(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
-# tag: 43B758A9-8B3F-4CCD-8818-DB9E1AB63CFE
 func Receive_Message_v1_19(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1319,7 +1352,6 @@ func Receive_Message_v1_19(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 
-# tag: ECD5D5DB-EA1E-4FDD-BF70-3FBDD8765990
 func Set_Graphic_v1_26(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1358,7 +1390,6 @@ func Set_Graphic_v1_26(_behavior_data):
 	for node in target_nodes:
 		var sprite := node.get_node_or_null("Sprite2D") as Sprite2D
 		if sprite == null:
-			Console.print_line("Set_Graphic_v1_26: %s has no Sprite2D child" % node.name)
 			continue
 		sprite.texture = new_texture
 

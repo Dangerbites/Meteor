@@ -227,7 +227,7 @@ func _process(_delta):
 
 	# F1 opens the user data folder - referenced in the "modified scripts"
 	# warning text above, so it needs to actually do that.
-	if Input.is_action_just_pressed("ui_help") or Input.is_key_pressed(KEY_F1):
+	if Input.is_action_just_pressed("ui_home") or Input.is_key_pressed(KEY_F1):
 		var user_path = ProjectSettings.globalize_path("user://")
 		OS.shell_open(user_path)
 
