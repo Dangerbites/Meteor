@@ -21,15 +21,16 @@ config/icon="res://logo.png"
 [autoload]
 
 EmulatorManager="*uid://blebodrbh30y4"
-Console="*uid://ouiu5xh1cs8n"
 TapAssetExtractor="*uid://cpxxxxpedbu3c"
-ImGuiRoot="*uid://dugmpnsxaagba"
 GlobalBehaviorData="*uid://dp83hr25t5qk2"
+ImGuiRoot="*uid://dugmpnsxaagba"
+Console="*uid://ouiu5xh1cs8n"
 
 [display]
 
 window/size/viewport_width=1024
 window/size/viewport_height=768
+window/subwindows/embed_subwindows=false
 window/stretch/mode="canvas_items"
 
 [dotnet]

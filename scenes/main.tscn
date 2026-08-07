@@ -12,6 +12,7 @@
 [ext_resource type="FontFile" uid="uid://dv12mbq4k6xf5" path="res://helvetica-255/Helvetica-Bold.ttf" id="9_eb6dy"]
 [ext_resource type="FontFile" uid="uid://drslp1b6prf84" path="res://helvetica-255/Helvetica-BoldOblique.ttf" id="10_trceg"]
 [ext_resource type="FontFile" uid="uid://slcks6evcrvh" path="res://helvetica-255/Helvetica-Oblique.ttf" id="11_a8y0u"]
+[ext_resource type="PackedScene" uid="uid://66f5e7ymh60i" path="res://objects/settings.tscn" id="13_trceg"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85g3d"]
 content_margin_left = 32.0
@@ -111,8 +112,9 @@ position = Vector2(509, 397)
 scale = Vector2(1.1984587, 1.1984586)
 texture = ExtResource("6_tefeu")
 
-[node name="GayUI" type="CanvasLayer" parent="." unique_id=739012972]
+[node name="GayUI" type="CanvasLayer" parent="." unique_id=739012972 node_paths=PackedStringArray("SettingsWindow")]
 script = ExtResource("1_tipki")
+SettingsWindow = NodePath("../Settings")
 
 [node name="MenuBar" type="MenuBar" parent="GayUI" unique_id=1819804342]
 anchors_preset = 10
@@ -219,6 +221,7 @@ theme_override_styles/labeled_separator_left = SubResource("StyleBoxFlat_o6xl0")
 theme_override_styles/labeled_separator_right = SubResource("StyleBoxFlat_o6xl0")
 
 [node name="OpenTapFileDialog" type="FileDialog" parent="GayUI" unique_id=474783667]
+oversampling_override = 1.0
 title = "Open a File"
 file_mode = 0
 access = 2
@@ -251,6 +254,10 @@ text = "bla bla bla"
 selection_enabled = true
 
 [node name="DebugUI" parent="." unique_id=1682261412 instance=ExtResource("9_85g3d")]
+
+[node name="Settings" parent="." unique_id=868492402 instance=ExtResource("13_trceg")]
+unique_name_in_owner = true
+visible = false
 
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu" to="GayUI" method="_on_file_menu_id_pressed"]
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu/PopupMenu" to="GayUI" method="_recent_project_id_pressed"]

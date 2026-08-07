@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+@export var SettingsWindow : Window
+
 const RECENT_TAPS_MAX: int = 25
 const RECENT_TAPS_SAVE_PATH := "user://recent_taps.cfg"
 
@@ -26,10 +28,14 @@ func _ready() -> void:
 	
 	$MenuBar/PopupMenu2.add_submenu_item("Load Scene", "PopupMenu")
 
+	$MenuBar/PopupMenu2.add_item("Settings", 100)
+	$MenuBar/PopupMenu2.id_pressed.connect(_on_menu_item_pressed)
+
 	_update_recent_projects(null)
 
-func _process(_delta: float) -> void:
-	pass
+func _on_menu_item_pressed(id: int):
+	if id == 100:
+		SettingsWindow.show()
 
 func _recent_project_id_pressed(id: int) -> void:
 	_open_project($MenuBar/PopupMenu/PopupMenu.get_item_text(id))

@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://c15xs5ybeffk8" path="res://Scripts/hyperpad_object.gd" id="1_yp6bn"]
 [ext_resource type="Script" uid="uid://bifjktb11qkhj" path="res://Scripts/TTFlabel.gd" id="2_b1002"]
 [ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="3_ywc4r"]
+[ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="4_v3buk"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
 
@@ -23,3 +24,5 @@ script = ExtResource("2_b1002")
 shape = SubResource("RectangleShape2D_plwxy")
 
 [node name="touchingComponent" parent="." unique_id=1357324686 instance=ExtResource("3_ywc4r")]
+
+[node name="BehaviorInterpreter" parent="." unique_id=740618950 instance=ExtResource("4_v3buk")]

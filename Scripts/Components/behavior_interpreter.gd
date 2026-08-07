@@ -168,6 +168,10 @@ func _process(_delta: float) -> void:
 
 	for behavior in TIMERS_TO_EXECUTE:
 		var tag = behavior["tag"]
+		if not GlobalBehaviorData.BehaviorStates.get(tag, true):
+			timers_to_remove.append(behavior)
+			continue
+
 		var wait_time = float(check_value_key(behavior["actions"]["waitTime"]))
 
 		if wait_time == 0:
@@ -188,7 +192,12 @@ func _process(_delta: float) -> void:
 	for behavior in timers_to_remove:
 		remove_timer(behavior)
 
+	var frame_events_to_remove: Array = []
 	for frame_event in FRAME_EVENTS_TO_RUN:
+		if not GlobalBehaviorData.BehaviorStates.get(frame_event.get("tag", ""), true):
+			frame_events_to_remove.append(frame_event)
+			continue
+
 		var get_next_behavior_id: Array = frame_event.get("actions", {}).get("outputs", [])
 
 		for id in get_next_behavior_id:
@@ -206,9 +215,15 @@ func _process(_delta: float) -> void:
 			else:
 				Console.print_line("FRAME_EVENTS_TO_RUN | Warning: No method '%s' found" % method_name)
 
+	for frame_event in frame_events_to_remove:
+		FRAME_EVENTS_TO_RUN.erase(frame_event)
+
 func run_next_behavior(_behavior_data) -> void:
 	var _t0 = Time.get_ticks_usec()
 	GlobalBehaviorData.prof_run_next_calls += 1
+
+	if not GlobalBehaviorData.BehaviorStates.get(_behavior_data.get("tag", ""), true):
+		return
 
 	var get_next_behavior_id: Array = _behavior_data.get("actions", {}).get("outputs", [])
 
@@ -394,6 +409,10 @@ func Wait(_behavior_data) -> void:
 
 	var wait_amount = float(check_value_key(_behavior_data["actions"]["waitTime"]))
 	await get_tree().create_timer(wait_amount).timeout
+
+	if not GlobalBehaviorData.BehaviorStates.get(_behavior_data["tag"], true):
+		_set_behavior_status(_behavior_data["tag"], "done")
+		return
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
@@ -1071,17 +1090,27 @@ func Collision_Event(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
-	var target_nodes = get_target_nodes(_behavior_data)
+	# Register the collision listener on the object that OWNS this behavior
+	# (self), not on target nodes resolved from the behavior's "groups" /
+	# object. Using get_target_nodes() here was a bug for tag-based
+	# Collision Events: a behavior configured with objectB = tag "conveyor"
+	# carries "groups": ["conveyor"], so get_target_nodes() resolved to ALL
+	# conveyor bodies and registered on THEM, making the collision only ever
+	# fire from the wrong component. Registering on self means each collided
+	# body is then matched by _matches_object_b() in
+	# CollisionDetectionComponent (which already handles the group filter).
+	var my_parent = get_parent()
+	var my_component = my_parent.get_node_or_null("CollisionDetectionComponent")
+	if my_component == null:
+		Console.print_line("Collision_Event: missing CollisionDetectionComponent on self")
+		_set_behavior_status(_behavior_data["tag"], "done")
+		return
 
-	for node in target_nodes:
-		var collisionComponent = node.get_node("CollisionDetectionComponent")
-		if not collisionComponent.nodes_to_check.has(self):
-			collisionComponent.nodes_to_check[self] = []
-		collisionComponent.nodes_to_check[self].append(_behavior_data)
+	if not my_component.nodes_to_check.has(self):
+		my_component.nodes_to_check[self] = []
+	my_component.nodes_to_check[self].append(_behavior_data)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
-
-# tag: 6BB98D4A-8FB0-4067-B5A4-AE9D871A203B
 func Behaviour_On(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1100,6 +1129,78 @@ func Behaviour_On(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
+
+# tag: 5A5AC55E-0AA6-441F-B440-5ADF93DB61D9
+func Behaviour_Off(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var behaviour_A_UUID = _behavior_data["actions"]["behaviourA"]
+	GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = false
+
+	# Remove the target from any pending timer / frame loops so turning it
+	# off cancels in-flight execution, not just future invocations.
+	timer_elapsed.erase(behaviour_A_UUID)
+
+	for interpreter in get_tree().get_nodes_in_group("Interpreter"):
+		interpreter._drop_behavior_loops(behaviour_A_UUID)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+func _drop_behavior_loops(target_tag: String) -> void:
+	var timers_to_remove: Array = []
+	for timer in TIMERS_TO_EXECUTE:
+		if timer["tag"] == target_tag:
+			timers_to_remove.append(timer)
+	for timer in timers_to_remove:
+		remove_timer(timer)
+
+	var frames_to_remove: Array = []
+	for frame_event in FRAME_EVENTS_TO_RUN:
+		if frame_event["tag"] == target_tag:
+			frames_to_remove.append(frame_event)
+	for frame_event in frames_to_remove:
+		FRAME_EVENTS_TO_RUN.erase(frame_event)
+
+# tag: 68CEC4C4-0A03-43C4-9AC3-E9EE85D16443
+func Combine_Text(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var value_a = str(get_action_field(actions, "valueA", ""))
+	var value_b = str(get_action_field(actions, "valueB", ""))
+	var add_space = bool(get_action_field(actions, "space", false))
+	var add_newline = bool(get_action_field(actions, "newline", false))
+
+	var separator := ""
+	if add_newline:
+		separator = "\n"
+	elif add_space:
+		separator = " "
+
+	var combined_text = value_a + separator + value_b
+
+	# Output key is the literal "combined text" (the behavior's declared
+	# output name in actions["value"]) — consumers like Change Label link
+	# to it via controlledBy + valueKey and read output_store[tag]["combined text"].
+	output_store[_behavior_data["tag"]] = {"combined text": combined_text}
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return {"combined text": combined_text}
 
 # tag: 3C91ABC7-9629-4EA7-94D5-9697CE04FB54
 func Spawn_On_Point(_behavior_data):
@@ -1248,6 +1349,8 @@ func If(_behavior_data):
 	var valueA = get_action_field(_behavior_data["actions"], "valueA", 0)
 	var valueB = get_action_field(_behavior_data["actions"], "valueB", 0)
 
+	#print_rich("[color=yellow]IF STATEMENT :[/color] (%s %s %s) | %s" % [valueA,condition,valueB, _behavior_data["actions"]["alias"]])
+
 	match condition:
 		">=":
 			if float(valueA) >= float(valueB):
@@ -1392,6 +1495,131 @@ func Set_Graphic_v1_26(_behavior_data):
 		if sprite == null:
 			continue
 		sprite.texture = new_texture
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 0665857C-CA44-4E4B-82AC-05911BC85801
+func Get_Screen(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	#print_rich("[color=yellow]GET SCREEN :[/color] Aspect_Ratio = %s | %s" % [EmulatorManager.Aspect_Ratio, _behavior_data["actions"].get("alias", "?")])
+
+	var result := {
+		"x" = 0,
+		"y" = 0,
+		"width" = 0,
+		"height" = 0,
+		"aspect ratio" = EmulatorManager.Aspect_Ratio,
+		"zoom" = 0,
+		"rotation" = 0
+	}
+
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: FCDEC82E-E460-4478-9C95-450167300457
+func Set_Z_Order(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Set_Z_Order: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	var z_order = int(get_action_field(actions, "zOrder", 0))
+
+	for node in target_nodes:
+		node.z_index = z_order
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+func Group(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var outputs: Array = actions.get("outputs", [])
+
+	for target_tag in outputs:
+		_run_single_output(target_tag)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+
+# tag: 0390B456-3EF1-4820-BE2C-EE095CE7D9BF
+func Change_Label(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Change_Label: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	var new_text = str(get_action_field(actions, "text", ""))
+	var change_font_size = bool(get_action_field(actions, "changeFontSize", false))
+	var font_size = int(get_action_field(actions, "fontSize", 0))
+	var change_outline = bool(get_action_field(actions, "changeOutline", false))
+	var change_shadow = bool(get_action_field(actions, "changeShadow", false))
+
+	for node in target_nodes:
+		var label := node.get_node_or_null("Label") as RichTextLabel
+		if label == null:
+			continue
+
+		label.text = new_text
+
+		if change_font_size:
+			label.add_theme_font_size_override("normal_font_size", font_size)
+
+		if change_outline:
+			var outline_color = Color(str(get_action_field(actions, "outlineColour", "#FFFFFFFF")))
+			var outline_radius = int(get_action_field(actions, "outlineRadius", 0))
+			label.add_theme_color_override("font_outline_color", outline_color)
+			label.add_theme_constant_override("outline_size", outline_radius)
+
+		if change_shadow:
+			var shadow_color = Color(str(get_action_field(actions, "shadowColour", "#000000FF")))
+			var shadow_blur = int(get_action_field(actions, "shadowBlur", 0))
+			var offset_x = int(get_action_field(actions, "offsetX", 0))
+			var offset_y = int(get_action_field(actions, "offsetY", 0))
+			label.add_theme_color_override("font_shadow_color", shadow_color)
+			label.add_theme_constant_override("shadow_outline_size", shadow_blur)
+			label.add_theme_constant_override("shadow_offset_x", offset_x)
+			label.add_theme_constant_override("shadow_offset_y", offset_y)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)

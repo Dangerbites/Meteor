@@ -52,8 +52,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Array
   - [ ] Authenticate OAuth
   - [ ] Battery Status
-  - [ ] Behavior Bundle
-  - [ ] Behaviour Off
+  - [x] Behavior Bundle
+  - [x] Behaviour Off
   - [x] Behaviour On (Needs Testing)
   - [ ] Bitwise Operation
   - [ ] Boolean
@@ -64,7 +64,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Calculate Distance
   - [ ] Clamp Value
   - [ ] Clipboard
-  - [ ] Combine Text
+  - [x] Combine Text
   - [ ] Comment
   - [ ] Connect to Socket
   - [x] Collision Event
@@ -100,6 +100,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Get Objects By Tag
   - [ ] Get Pixel
   - [ ] Get Socket Status
+  - [x] Get Screen
   - [ ] Get Time
   - [ ] HTTP Request
   - [ ] HitPoint Test
@@ -147,11 +148,13 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Set Cursor Style
   - [x] Set Color
   - [x] Set Graphic v1.26
+  - [x] Set Label
   - [ ] Set Music Settings
   - [ ] Set Physics Mode
   - [ ] Set Physics Property
   - [ ] Set Sound Settings
   - [ ] Set Visibility
+  - [x] Set Z Order
   - [ ] Share
   - [x] Show Layer v1.26
   - [ ] Socket Event

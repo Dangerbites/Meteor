@@ -2,6 +2,9 @@ extends Node
 
 signal finished_loading_level
 
+# SETTINGS VARIABLES
+var Aspect_Ratio : String = "4:3"
+
 # HYPERPAD OBJECT TYPES
 var EmptyObjectScene : PackedScene = preload("res://objects/EmptyObject.tscn")
 var GraphicObjectScene : PackedScene = preload("res://objects/graphic_object.tscn")

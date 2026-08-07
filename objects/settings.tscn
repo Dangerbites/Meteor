@@ -1,0 +1,75 @@
+[gd_scene format=3 uid="uid://66f5e7ymh60i"]
+
+[ext_resource type="Script" uid="uid://u2yapur76bfn" path="res://Scripts/settings.gd" id="1_uxtcc"]
+[ext_resource type="FontFile" uid="uid://cn6bqbsl0rvut" path="res://helvetica-255/Helvetica.ttf" id="2_so4ao"]
+[ext_resource type="FontFile" uid="uid://dv12mbq4k6xf5" path="res://helvetica-255/Helvetica-Bold.ttf" id="3_faq0n"]
+[ext_resource type="FontFile" uid="uid://drslp1b6prf84" path="res://helvetica-255/Helvetica-BoldOblique.ttf" id="4_7g0q1"]
+[ext_resource type="FontFile" uid="uid://slcks6evcrvh" path="res://helvetica-255/Helvetica-Oblique.ttf" id="5_2crow"]
+
+[node name="Settings" type="Window" unique_id=868492402]
+oversampling_override = 1.0
+title = "Settings"
+initial_position = 1
+size = Vector2i(650, 650)
+always_on_top = true
+script = ExtResource("1_uxtcc")
+
+[node name="bg_color" type="ColorRect" parent="." unique_id=608460140]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1254902, 0.1254902, 0.1254902, 1)
+
+[node name="TabContainer" type="TabContainer" parent="." unique_id=404740303]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 17.0
+offset_right = -12.0
+offset_bottom = -17.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("2_so4ao")
+current_tab = 0
+
+[node name="Device Settings" type="ScrollContainer" parent="TabContainer" unique_id=2039066133]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TabContainer/Device Settings" unique_id=1105686530]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TabContainer/Device Settings/VBoxContainer" unique_id=1387134406]
+layout_mode = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="TabContainer/Device Settings/VBoxContainer/HBoxContainer" unique_id=1007548146]
+custom_minimum_size = Vector2(400, 50)
+layout_mode = 2
+tooltip_text = "this just sets what the `get screen` behavior will return for `aspect ratio`"
+theme_override_fonts/normal_font = ExtResource("2_so4ao")
+theme_override_fonts/bold_font = ExtResource("3_faq0n")
+theme_override_fonts/bold_italics_font = ExtResource("4_7g0q1")
+theme_override_fonts/italics_font = ExtResource("5_2crow")
+text = "Device Aspect Ratio"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ApectRatio" type="OptionButton" parent="TabContainer/Device Settings/VBoxContainer/HBoxContainer" unique_id=1903303316]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_so4ao")
+alignment = 1
+selected = 0
+item_count = 2
+popup/item_0/text = "4:3 (iPad)"
+popup/item_0/id = 0
+popup/item_1/text = "199:139 (iPad Pro)"
+popup/item_1/id = 1
+
+[connection signal="close_requested" from="." to="." method="_on_close_requested"]
+[connection signal="item_selected" from="TabContainer/Device Settings/VBoxContainer/HBoxContainer/ApectRatio" to="." method="_on_apect_ratio_item_selected"]
