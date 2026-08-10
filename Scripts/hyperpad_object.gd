@@ -7,6 +7,16 @@ var object_data
 var layer : int
 
 func _ready() -> void:
+	layer = int(object_data.get("layer", 1))
+
+	var body := get_node(".") as CollisionObject2D
+	if body != null:
+		var layer_bit := clampi(layer, 1, 32)
+		var layer_mask := 1 << layer_bit
+		body.collision_layer = layer_mask
+		body.collision_mask = layer_mask
+
+
 	visible = !object_data["gameobjectdata"]["hidden"]
 
 	ui_element = object_data["ui_element"]

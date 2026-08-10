@@ -1349,25 +1349,31 @@ func If(_behavior_data):
 	var valueA = get_action_field(_behavior_data["actions"], "valueA", 0)
 	var valueB = get_action_field(_behavior_data["actions"], "valueB", 0)
 
-	#print_rich("[color=yellow]IF STATEMENT :[/color] (%s %s %s) | %s" % [valueA,condition,valueB, _behavior_data["actions"]["alias"]])
+	print_rich("[color=yellow]IF STATEMENT :[/color] (%s %s %s) | %s" % [valueA,condition,valueB, _behavior_data["actions"]["alias"]])
 
 	match condition:
 		">=":
+			print_rich("[color=gray]%s[/color]" % [float(valueA) >= float(valueB)])
 			if float(valueA) >= float(valueB):
 				run_next_behavior(_behavior_data)
 		"<=":
+			print_rich("[color=gray]%s[/color]" % [float(valueA) <= float(valueB)])
 			if float(valueA) <= float(valueB):
 				run_next_behavior(_behavior_data)
 		">":
+			print_rich("[color=gray]%s[/color]" % [float(valueA) > float(valueB)])
 			if float(valueA) > float(valueB):
 				run_next_behavior(_behavior_data)
 		"<":
+			print_rich("[color=gray]%s[/color]" % [float(valueA) < float(valueB)])
 			if float(valueA) < float(valueB):
 				run_next_behavior(_behavior_data)
-		"=":
+		"==":
+			print_rich("[color=gray]%s[/color]" % [str(valueA) == str(valueB)])
 			if str(valueA) == str(valueB):
 				run_next_behavior(_behavior_data)
 		"!=":
+			print_rich("[color=gray]%s[/color]" % [str(valueA) != str(valueB)])
 			if str(valueA) != str(valueB):
 				run_next_behavior(_behavior_data)
 
@@ -1620,6 +1626,203 @@ func Change_Label(_behavior_data):
 			label.add_theme_constant_override("shadow_outline_size", shadow_blur)
 			label.add_theme_constant_override("shadow_offset_x", offset_x)
 			label.add_theme_constant_override("shadow_offset_y", offset_y)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 4FE454A9-2BBB-47CD-876C-277128D18231
+func Camera_Follow(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var cam = get_tree().get_first_node_in_group("HyperpadCamera") as Camera2D
+
+	if cam == null:
+		Console.print_line("Camera_Follow: no HyperpadCamera found — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Camera_Follow: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	var follows_x = bool(get_action_field(actions, "followsX", true))
+	var follows_y = bool(get_action_field(actions, "followsY", true))
+
+	cam.set_follow_target(target_nodes[0], follows_x, follows_y)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 480CF948-D249-42A1-AD37-9CC8530529F6
+# tag: 7E698ED8-72F6-4E05-B163-014DF76F2595
+var _active_camera_tween: Tween = null
+
+func Camera_To_Object(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var cam = get_tree().get_first_node_in_group("HyperpadCamera") as Camera2D
+
+	if cam == null:
+		Console.print_line("Camera_To_Object: no HyperpadCamera found — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Camera_To_Object: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	# A camera only has one position, so with multiple resolved targets
+	# (e.g. a "groups" match) we go to the first one rather than the old
+	# behavior of silently snapping through all of them and landing on
+	# whichever happened to be last in the array.
+	var target_position: Vector2 = target_nodes[0].global_position
+
+	var duration = float(get_action_field(actions, "duration", 0.0))
+	var ease_action = int(get_action_field(actions, "easeAction", 0))
+
+	if is_instance_valid(_active_camera_tween) and _active_camera_tween.is_valid():
+		_active_camera_tween.kill()
+		_active_camera_tween = null
+
+	if duration <= 0.0:
+		cam.global_position = target_position
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	var tween = create_tween()
+	_active_camera_tween = tween
+
+	var ease_pair = _get_ease(ease_action)
+	tween.set_trans(ease_pair[0])
+	tween.set_ease(ease_pair[1])
+
+	tween.tween_property(cam, "global_position", target_position, duration)
+
+	await tween.finished
+
+	if _active_camera_tween == tween:
+		_active_camera_tween = null
+
+	if not is_instance_valid(self):
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 1ABF561A-F164-41BC-84A1-0816867FB39A
+var _active_camera_zoom_tween: Tween = null
+
+func Zoom_Camera(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var cam = get_tree().get_first_node_in_group("HyperpadCamera") as Camera2D
+
+	if cam == null:
+		Console.print_line("Zoom_Camera: no HyperpadCamera found — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var zoom_percent = float(get_action_field(actions, "scale", 100.0))
+
+	# Hyperpad's zoom % is the inverse of Godot's Camera2D.zoom: higher %
+	# means more magnified (zoomed IN), but a higher Godot zoom value means
+	# zoomed OUT. Guard against 0/negative percent, which would otherwise
+	# divide-by-zero or flip the camera.
+	if zoom_percent <= 0.0:
+		Console.print_line("Zoom_Camera: zoom percent %s is <= 0 — skipping" % zoom_percent)
+		run_next_behavior(_behavior_data)
+		return
+
+	var target_zoom = Vector2.ONE / (zoom_percent / 100.0)
+
+	var duration = float(get_action_field(actions, "duration", 0.0))
+	var ease_action = int(get_action_field(actions, "easeAction", 0))
+
+	if is_instance_valid(_active_camera_zoom_tween) and _active_camera_zoom_tween.is_valid():
+		_active_camera_zoom_tween.kill()
+		_active_camera_zoom_tween = null
+
+	if duration <= 0.0:
+		cam.zoom = target_zoom
+		_set_behavior_status(_behavior_data["tag"], "done")
+		run_next_behavior(_behavior_data)
+		return
+
+	var tween = create_tween()
+	_active_camera_zoom_tween = tween
+
+	var ease_pair = _get_ease(ease_action)
+	tween.set_trans(ease_pair[0])
+	tween.set_ease(ease_pair[1])
+
+	tween.tween_property(cam, "zoom", target_zoom, duration)
+
+	await tween.finished
+
+	if _active_camera_zoom_tween == tween:
+		_active_camera_zoom_tween = null
+
+	if not is_instance_valid(self):
+		return
+
+	# "Triggers on Completion" — the JSON's root == 1 here (vs 0 for the
+	# other Camera behaviors), meaning this is itself a root/entry behavior,
+	# not something chained into. run_next_behavior still fires its own
+	# "outputs" (currently [] in this instance) once the zoom finishes.
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 085A9E80-E136-4179-8C51-6FE659BC0EC4
+func Turn_Physics_On(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var target_nodes = get_target_nodes(_behavior_data)
+	for node in target_nodes:
+		if node.has_method("bake_scale_into_children"):
+			node.bake_scale_into_children()
+		node.freeze = false
+
+	var physics_mode = str(object_data.get("physics_mode", ""))
+	match physics_mode:
+		"Dynamic", "Kinematic":
+			var owner_object = get_parent()
+			if owner_object.has_method("bake_scale_into_children"):
+				owner_object.bake_scale_into_children()
+			owner_object.freeze = false
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)

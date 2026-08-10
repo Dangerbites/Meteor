@@ -32,6 +32,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
 
 - [x] Empty Objects
 - [x] Life Objects
+- [x] Hyperpad Camera
 - [x] Health Bar Objects
 - [x] Joystick Objects
 - [x] Graphic Objects
@@ -142,6 +143,8 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Round Number
   - [ ] Save to File
   - [x] Scale By
+  - [x] Screen Follow
+  - [x] Screen To Object
   - [ ] Set Background
   - [ ] Set Background Color
   - [ ] Set Behavior State
@@ -169,6 +172,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Swipe Gesture
   - [ ] Text Length
   - [ ] Text Operation
+  - [x] Turn Physics On
   - [x] Timer
   - [x] Timer v1.33
   - [ ] Track Event
@@ -177,6 +181,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Value
   - [x] Wait
   - [x] While Colliding
+  - [x] Zoom Screen
 
 ## Debugging
 To open the behavior interpreter debugging window press `TAB` to activate it

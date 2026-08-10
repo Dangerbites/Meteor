@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://df2g5aehe63ky"]
+
+[ext_resource type="Script" uid="uid://ephnl2oqhgrx" path="res://Scripts/hyperpad_camera.gd" id="1_l1jdm"]
+
+[node name="HyperpadCamera" type="Camera2D" unique_id=2036896247 groups=["HyperpadCamera"]]
+script = ExtResource("1_l1jdm")

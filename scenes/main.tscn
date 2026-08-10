@@ -13,6 +13,8 @@
 [ext_resource type="FontFile" uid="uid://drslp1b6prf84" path="res://helvetica-255/Helvetica-BoldOblique.ttf" id="10_trceg"]
 [ext_resource type="FontFile" uid="uid://slcks6evcrvh" path="res://helvetica-255/Helvetica-Oblique.ttf" id="11_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://66f5e7ymh60i" path="res://objects/settings.tscn" id="13_trceg"]
+[ext_resource type="PackedScene" uid="uid://df2g5aehe63ky" path="res://objects/hyperpad_camera.tscn" id="14_a8y0u"]
+[ext_resource type="Script" uid="uid://bvb2uokmr4gvu" path="res://Scripts/hyperpad_camera.gd" id="15_jkv2x"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_85g3d"]
 content_margin_left = 32.0
@@ -258,6 +260,10 @@ selection_enabled = true
 [node name="Settings" parent="." unique_id=868492402 instance=ExtResource("13_trceg")]
 unique_name_in_owner = true
 visible = false
+
+[node name="HyperpadCamera" parent="." unique_id=2036896247 instance=ExtResource("14_a8y0u")]
+position = Vector2(512, 384)
+script = ExtResource("15_jkv2x")
 
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu" to="GayUI" method="_on_file_menu_id_pressed"]
 [connection signal="id_pressed" from="GayUI/MenuBar/PopupMenu/PopupMenu" to="GayUI" method="_recent_project_id_pressed"]
