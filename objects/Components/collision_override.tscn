@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bwbhuaoo6rsxq"]
+
+[ext_resource type="Script" uid="uid://jjoiabk0r8d6" path="res://objects/Components/collision_override.gd" id="1_onvfj"]
+
+[node name="CollisionOverride" type="Node" unique_id=1603179530]
+script = ExtResource("1_onvfj")

@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="2_ml7pp"]
 [ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="3_hwmqh"]
 [ext_resource type="PackedScene" uid="uid://4lhifltxbsow" path="res://objects/Components/collision_detection_component.tscn" id="4_68xm8"]
+[ext_resource type="PackedScene" uid="uid://bwbhuaoo6rsxq" path="res://objects/Components/collision_override.tscn" id="5_mqqft"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
 size = Vector2(70, 70)
@@ -29,3 +30,5 @@ metadata/_edit_use_anchors_ = true
 shape = SubResource("RectangleShape2D_plwxy")
 
 [node name="CollisionDetectionComponent" parent="." unique_id=1827404627 instance=ExtResource("4_68xm8")]
+
+[node name="CollisionOverride" parent="." unique_id=1603179530 instance=ExtResource("5_mqqft")]

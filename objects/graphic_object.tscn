@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="4_8skcp"]
 [ext_resource type="PackedScene" uid="uid://4lhifltxbsow" path="res://objects/Components/collision_detection_component.tscn" id="5_ehdme"]
 [ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="5_t3dit"]
+[ext_resource type="PackedScene" uid="uid://bwbhuaoo6rsxq" path="res://objects/Components/collision_override.tscn" id="6_ehdme"]
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_8skcp"]
 load_path = "res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex"
@@ -31,3 +32,5 @@ collision = NodePath("../CollisionShape2D")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1433276862]
 shape = SubResource("RectangleShape2D_t3dit")
+
+[node name="CollisionOverride" parent="." unique_id=1603179530 instance=ExtResource("6_ehdme")]

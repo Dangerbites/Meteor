@@ -1368,7 +1368,7 @@ func If(_behavior_data):
 			print_rich("[color=gray]%s[/color]" % [float(valueA) < float(valueB)])
 			if float(valueA) < float(valueB):
 				run_next_behavior(_behavior_data)
-		"==":
+		"==", "=":
 			print_rich("[color=gray]%s[/color]" % [str(valueA) == str(valueB)])
 			if str(valueA) == str(valueB):
 				run_next_behavior(_behavior_data)
@@ -1802,6 +1802,8 @@ func Zoom_Camera(_behavior_data):
 
 # tag: 085A9E80-E136-4179-8C51-6FE659BC0EC4
 func Turn_Physics_On(_behavior_data):
+	#return
+
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
 
