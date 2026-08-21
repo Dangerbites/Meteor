@@ -1,5 +1,8 @@
 extends Node
 
+# Collided (fires once per contact, re-arms on separation) — { interpreter: [behavior_data, ...] }
+var collided_nodes_to_check : Dictionary = {}
+
 # While Colliding — { interpreter: [behavior_data, ...] }
 var while_nodes_to_check : Dictionary = {}
 # Collision Event — { interpreter: [behavior_data, ...] }
@@ -58,6 +61,20 @@ func _on_parent_body_entered(body: Node) -> void:
 					for objectB in objectBList:
 						if objectB == body:
 							node.run_next_behavior(behavior_data)
+
+		for node in collided_nodes_to_check:
+			for behavior_data in collided_nodes_to_check[node]:
+				if _matches_object_b(node, behavior_data, body):
+					node.output_store[behavior_data["tag"]] = {
+						"x": body.global_position.x,
+						"y": body.global_position.y,
+						"impulse": 0.0,
+						"objectA_ID": node.get_parent().id,
+						"objectB_ID": body.get("id") if body.get("id") != null else "",
+					}
+					node.run_next_behavior(behavior_data)
+
+
 
 func _on_parent_body_exited(body: Node) -> void:
 	if colliding_bodies.has(body):

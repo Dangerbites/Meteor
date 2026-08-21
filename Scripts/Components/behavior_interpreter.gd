@@ -1111,6 +1111,7 @@ func Collision_Event(_behavior_data):
 	my_component.nodes_to_check[self].append(_behavior_data)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
+	
 func Behaviour_On(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1121,6 +1122,10 @@ func Behaviour_On(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var behaviour_A_UUID = _behavior_data["actions"]["behaviourA"]
+
+	if !GlobalBehaviorData.BehaviorStates.has(behaviour_A_UUID):
+		GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
+
 	if GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] == false:
 		GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
 
@@ -1141,10 +1146,12 @@ func Behaviour_Off(_behavior_data):
 	_set_behavior_status(_behavior_data["tag"], "running")
 
 	var behaviour_A_UUID = _behavior_data["actions"]["behaviourA"]
+
+	if !GlobalBehaviorData.BehaviorStates.has(behaviour_A_UUID):
+		GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = true
+
 	GlobalBehaviorData.BehaviorStates[behaviour_A_UUID] = false
 
-	# Remove the target from any pending timer / frame loops so turning it
-	# off cancels in-flight execution, not just future invocations.
 	timer_elapsed.erase(behaviour_A_UUID)
 
 	for interpreter in get_tree().get_nodes_in_group("Interpreter"):
@@ -1839,5 +1846,20 @@ func Collided(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
+	# Registers on self's CollisionDetectionComponent, same pattern as
+	# Collision_Event / While_Touching. Driven off body_entered, which only
+	# fires once per new contact and won't fire again until body_exited —
+	# giving us "fires once, re-arms on separation" for free, with no extra
+	# per-body arm/disarm state needed here.
+	var my_parent = get_parent()
+	var my_component = my_parent.get_node_or_null("CollisionDetectionComponent")
+	if my_component == null:
+		Console.print_line("Collided: missing CollisionDetectionComponent on self")
+		_set_behavior_status(_behavior_data["tag"], "done")
+		return
+
+	if not my_component.collided_nodes_to_check.has(self):
+		my_component.collided_nodes_to_check[self] = []
+	my_component.collided_nodes_to_check[self].append(_behavior_data)
+
 	_set_behavior_status(_behavior_data["tag"], "done")
-	run_next_behavior(_behavior_data)
