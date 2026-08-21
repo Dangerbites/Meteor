@@ -68,6 +68,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [x] Combine Text
   - [ ] Comment
   - [ ] Connect to Socket
+  - [x] Collided / Started Colliding
   - [x] Collision Event
     - [x] While Colliding
     - [x] Started Colliding (Needs to be tested)
