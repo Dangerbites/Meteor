@@ -342,7 +342,14 @@ func load_scene(_scene : String = main_scene_name):
 	else:
 		objects = objects_dict.get("null", {})
 
-	var SceneSettings = project_json_parsed["SceneSettings"][_scene]
+	_apply_world_gravity()
+
+	var scene_settings_dict = project_json_parsed.get("SceneSettings", {})
+	var SceneSettings = scene_settings_dict.get(_scene, null)
+	if SceneSettings == null:
+		push_warning("load_scene: no SceneSettings for '%s' — available: %s" % [_scene, scene_settings_dict.keys()])
+		_is_loading_scene = false
+		return
 	var Layers = project_json_parsed["Layers"]
 
 	var BackgroundColorData = SceneSettings["background"]["color_rgb"]
@@ -507,6 +514,43 @@ func ensure_m4a_converter_in_user_folder() -> void:
 	target_file.store_string(content)
 	target_file.close()
 	print("Copied m4a_to_ogg.py to user folder.")
+
+func _apply_world_gravity() -> void:
+	if project_json_parsed == null:
+		return
+	var level_details = project_json_parsed.get("LevelDetails", {})
+	var game_details = project_json_parsed.get("GameDetails", {})
+	var type_str := str(level_details.get("type", "Side View"))
+	var lower := type_str.to_lower()
+	var is_top_down := lower.contains("bird") or lower.contains("top")
+	# Side View is the default physics mode; Birds Eye / Top Down locks gravity to 0,0
+	var gx_m := float(str(game_details.get("gravityX", "0")))
+	var gy_m := float(str(game_details.get("gravityY", "-25" if not is_top_down else "0")))
+	if gy_m != 0:
+		gy_m -= 2
+
+	var ptm := float(str(game_details.get("ptmRatio", "32")))
+	if is_top_down:
+		gx_m = 0.0
+		gy_m = 0.0
+	# HyperPad Y is up (negative is down), Godot Y is down (positive is down) — flip Y
+	var gravity_vec := Vector2(gx_m * ptm, -gy_m * ptm)
+	var space := RID()
+	if get_viewport() != null:
+		space = get_viewport().find_world_2d().space
+	if space == RID():
+		# Fallback: set global default so new spaces inherit it
+		ProjectSettings.set_setting("physics/2d/default_gravity", gravity_vec.length())
+		ProjectSettings.set_setting("physics/2d/default_gravity_vector", gravity_vec.normalized() if gravity_vec.length() > 0 else Vector2(0, 1))
+		return
+	var len := gravity_vec.length()
+	if len > 0.001:
+		PhysicsServer2D.area_set_param(space, PhysicsServer2D.AREA_PARAM_GRAVITY, len)
+		PhysicsServer2D.area_set_param(space, PhysicsServer2D.AREA_PARAM_GRAVITY_VECTOR, gravity_vec / len)
+	else:
+		PhysicsServer2D.area_set_param(space, PhysicsServer2D.AREA_PARAM_GRAVITY, 0.0)
+		PhysicsServer2D.area_set_param(space, PhysicsServer2D.AREA_PARAM_GRAVITY_VECTOR, Vector2(0, 1))
+	print("Gravity applied: type='%s' is_top_down=%s vec=%s (m/s2 %s,%s ptm %s)" % [type_str, is_top_down, gravity_vec, gx_m, gy_m, ptm])
 
 # -------------------------
 # DEVELOPER CONSOLE FUNCTIONS

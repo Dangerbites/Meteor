@@ -5,23 +5,49 @@ var while_nodes_to_check : Dictionary = {}
 # Collision Event — { interpreter: [behavior_data, ...] }
 var nodes_to_check : Dictionary = {}
 
-var parent: RigidBody2D
+var parent: Node2D
 var colliding_bodies: Dictionary = {}  # body -> true, acts as a set
+var touch_area: Area2D
 
 func _ready() -> void:
-	parent = get_parent() as RigidBody2D
+	parent = get_parent() as Node2D
 	if parent == null:
-		print("ERROR: parent is not a RigidBody2D!")
+		print("ERROR: parent is not a Node2D!")
 		return
-	parent.freeze_mode = RigidBody2D.FREEZE_MODE_KINEMATIC
-	parent.contact_monitor = true
-	parent.max_contacts_reported = 64
-	parent.body_entered.connect(_on_parent_body_entered)
-	parent.body_exited.connect(_on_parent_body_exited)
+	call_deferred("_setup_collision_detection")
+
+func _setup_collision_detection() -> void:
+	touch_area = parent.get_node_or_null("TouchArea") as Area2D
+	if touch_area == null:
+		await get_tree().process_frame
+		touch_area = parent.get_node_or_null("TouchArea") as Area2D
+
+	if touch_area == null:
+		print("WARNING: CollisionDetectionComponent could not find TouchArea on parent: ", parent.name)
+		return
+
+	# Scenery: frozen + passable with no collision behaviors, but still touchable
+	# (TouchArea mouse picking uses input_pickable, not monitoring).
+	var is_scenery := false
+	if parent.get("object_data") != null:
+		is_scenery = str(parent.object_data.get("physics_mode", "Dynamic")) == "Scenery"
+	if is_scenery:
+		touch_area.monitoring = false
+		touch_area.monitorable = false
+		set_physics_process(false)
+		return
+
+	touch_area.monitoring = true
+	touch_area.monitorable = true
+	if not touch_area.body_entered.is_connected(_on_parent_body_entered):
+		touch_area.body_entered.connect(_on_parent_body_entered)
+	if not touch_area.body_exited.is_connected(_on_parent_body_exited):
+		touch_area.body_exited.connect(_on_parent_body_exited)
 
 func _on_parent_body_entered(body: Node) -> void:
-	#print("body_entered fired on: ", parent.name, " <- ", body.name)
-	if body is RigidBody2D:
+	if body == parent:
+		return
+	if body is Node2D:
 		colliding_bodies[body] = true
 		#print(parent.name, " started colliding with: ", body.name)
 
@@ -47,11 +73,6 @@ func _on_parent_body_exited(body: Node) -> void:
 							node.run_next_behavior(behavior_data)
 
 func _physics_process(_delta: float) -> void:
-	if while_nodes_to_check.is_empty() and nodes_to_check.is_empty():
-		parent.freeze_mode = RigidBody2D.FREEZE_MODE_STATIC
-	else:
-		parent.freeze_mode = RigidBody2D.FREEZE_MODE_KINEMATIC
-
 	if colliding_bodies.size() > 0:
 		for body in colliding_bodies:
 			for node in nodes_to_check:
