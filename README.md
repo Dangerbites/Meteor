@@ -49,10 +49,19 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Joystick
   - [ ] Labels
 - [ ] Behaviors
+  - [ ] Active State
   - [x] Add To Score
+  - [ ] Add to Health Bar
+  - [ ] Add to Life Indicator
+  - [ ] Ad Clicked
+  - [ ] Air Resistance
+  - [ ] Alert
+  - [ ] Apply Force
+  - [ ] Apply Torque
   - [ ] Array
   - [ ] Authenticate OAuth
   - [ ] Battery Status
+  - [ ] Became Idle
   - [x] Behavior Bundle
   - [x] Behaviour Off
   - [x] Behaviour On (Needs Testing)
@@ -65,6 +74,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Calculate Distance
   - [ ] Clamp Value
   - [ ] Clipboard
+  - [ ] Close Overlay
   - [x] Combine Text
   - [ ] Comment
   - [ ] Connect to Socket
@@ -73,53 +83,97 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
     - [x] While Colliding
     - [x] Started Colliding (Needs to be tested)
     - [x] Stopped Colliding (Needs to be tested)
+  - [ ] Count Down
   - [ ] Create Collision
   - [x] Destroy Object
-  - [ ] Delete from File
+  - [ ] Detach Object
   - [ ] Device Identifier
   - [ ] Dictionary
+  - [ ] Disable Object
+  - [ ] Delete from File
   - [ ] Draw
+  - [ ] Drag & Drop
+  - [ ] Dragged Finger
   - [ ] Edit Text Event
   - [ ] Edit Text Field
   - [ ] Emit to Socket
+  - [ ] Enable Object
   - [ ] Execute Behaviour
   - [x] Execute Sequence
     - [x] Sequential
     - [ ] Random (Implimented I think? Should still be tested)
+  - [ ] Falling State
   - [x] Frame Event
     - Unsure, should check bugs for it
   - [ ] Get Array Count
   - [ ] Get Array Value
+  - [ ] Get Attribute
   - [ ] Get Background
   - [ ] Get Bounding Box
+  - [ ] Get Color
   - [ ] Get Dictionary Value
+  - [ ] Get Graphic Flip
+  - [ ] Get Gravity
+  - [ ] Get Health Bar
   - [x] Get Label
   - [ ] Get Life Indicator
   - [ ] Get Mouse Position
+  - [ ] Get Music Settings
   - [ ] Get Noise Value
   - [ ] Get OAuth Credentials
   - [ ] Get Object
   - [ ] Get Objects By Tag
+  - [ ] Get Physics Properties
   - [ ] Get Pixel
-  - [ ] Get Socket Status
+  - [ ] Get Position
+  - [ ] Get Rotation
+  - [ ] Get Rotational Velocity
   - [x] Get Screen
   - [x] Get Scale
+  - [ ] Get Skew
+  - [ ] Get Socket Status
   - [ ] Get Time
-  - [ ] HTTP Request
+  - [ ] Get Velocity
+  - [ ] Get Z Order
+  - [ ] Hide Graphic
+  - [ ] Hit by Bullet
   - [ ] HitPoint Test
+  - [ ] HTTP Request
   - [x] If
+  - [ ] Ignore Bullets
+  - [ ] Ignore Collisions
+  - [ ] Ignore Object's Bullets
   - [ ] Indicator Event
   - [ ] Interpolate Value
   - [ ] Is Intersecting
+  - [ ] Joystick Controlled
+  - [ ] Joystick Down
+  - [ ] Joystick Input
+  - [ ] Joystick Left
+  - [ ] Joystick Right
+  - [ ] Joystick Up
+  - [ ] Jump with Button
   - [ ] Keyboard Event
   - [ ] Keyboard Shortcut
   - [ ] Load Image
   - [x] Load Scene
     - [ ] Transitions
       - [x] none 
+  - [ ] Load Overlay
+  - [ ] Load Previous Scene
   - [ ] Load from File
+  - [ ] Lock Rotation
   - [ ] Loop
+  - [ ] Make Passable
+  - [ ] Make Physics
+  - [ ] Make Scenery
+  - [ ] Make Wall
   - [x] Multiply Values
+  - [ ] Add Values
+  - [ ] Divide Values
+  - [ ] Modulus
+  - [ ] Subtract Values
+  - [ ] Square Root
   - [ ] Math Expression
   - [ ] Math Function
   - [ ] Maximum
@@ -129,13 +183,23 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Modify Save File
   - [ ] Modify Tags
   - [ ] Mouse Event
+  - [ ] Movable Platform
   - [x] Move By
+  - [ ] Move to Layer
+  - [ ] Move to Object
   - [x] Move To Point
+  - [ ] Moving State
   - [ ] Noise Map
   - [ ] Open URL
-  - [ ] Post to Facebook
+  - [ ] Passable Platform
+  - [ ] Patrol
   - [x] Play Sound v1.21
   - [x] Play Music v1.21
+  - [ ] Pause Music
+  - [ ] Pivot Attach
+  - [ ] Post to Facebook
+  - [ ] Preload Scene
+  - [ ] Propel Object
   - [ ] Quit Project
   - [ ] Random Number
   - [ ] Raycast Test
@@ -143,49 +207,94 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [x] Receive Message v1.19
   - [ ] Remove OAuth Credentials
   - [ ] Render Texture
+  - [ ] Restart Scene
+  - [ ] Rope Attach
+  - [ ] Rotate By
+  - [ ] Rotate to Angle
+  - [ ] Rotate to Object
   - [ ] Round Number
   - [ ] Save to File
   - [x] Scale By
   - [x] Scale To
   - [x] Screen Follow
   - [x] Screen To Object
+  - [ ] Screen to Point
+  - [ ] Set Attribute
   - [ ] Set Background
   - [ ] Set Background Color
   - [ ] Set Behavior State
-  - [ ] Set Cursor Style
+  - [ ] Set Blending Mode
+  - [ ] Set Bounce
   - [x] Set Color
+  - [ ] Set Cursor Style
+  - [ ] Set Friction
   - [x] Set Graphic v1.26
+  - [ ] Set Graphic Flip
+  - [ ] Set Gravity
+  - [ ] Set Health Bar
   - [x] Set Label
+  - [ ] Set Layer Visibility
+  - [ ] Set Life Indicator
+  - [ ] Set Mass
   - [ ] Set Music Settings
   - [ ] Set Physics Mode
   - [ ] Set Physics Property
+  - [ ] Set Rotational Velocity
   - [ ] Set Sound Settings
+  - [ ] Set Time Scale
   - [ ] Set Visibility
   - [x] Set Z Order
-  - [ ] Share
   - [x] Shake Screen / Shake Camera v1_24
+  - [ ] Share
+  - [ ] Shoot
+  - [ ] Shoot with Button
+  - [ ] Show Graphic
   - [x] Show Layer v1.26
+  - [ ] Skew By
+  - [ ] Skew To
   - [ ] Socket Event
   - [ ] Socket.io Client
   - [ ] Sort Array
   - [ ] Sort by Distance
   - [x] Spawn On Area
+  - [ ] Spawn on Object
+  - [ ] Spring Attach
   - [ ] Start Trail
   - [x] Started Touching
+  - [ ] Started Falling
   - [ ] Stop Visual Effects
-  - [ ] Subtract Values
+  - [ ] Stopped Falling
+  - [ ] Stopped Moving
+  - [ ] Stopped Touching
+  - [ ] Swipe Down
   - [ ] Swipe Gesture
+  - [ ] Swipe Left
+  - [ ] Swipe Right
+  - [ ] Swipe Up
+  - [ ] Text Bubble
   - [ ] Text Length
   - [ ] Text Operation
-  - [x] Turn Physics On
+  - [ ] Tilt Controlled
+  - [ ] Tilt Down
+  - [ ] Tilt Left
+  - [ ] Tilt Right
+  - [ ] Tilt Sensor
+  - [ ] Tilt Up
   - [x] Timer
   - [x] Timer v1.33
   - [ ] Track Event
+  - [ ] Trigger Ad
   - [ ] Trim Text
   - [ ] Tweet
+  - [x] Turn Physics On
+  - [ ] Unload Scene
   - [ ] Value
   - [x] Wait
+  - [ ] Weld Attach
   - [x] While Colliding
+  - [ ] While Moving
+  - [ ] While Touching
+  - [ ] Wrap Around Screen
   - [x] Zoom Screen
 
 ## Debugging
