@@ -613,6 +613,81 @@ func Scale(_behavior_data: Dictionary) -> void:
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
+# tag: 3308B6D9-B652-4608-B7AC-A2CE4AE49A11 (pattern — dispatched by name)
+var _active_scale_to_tweens: Dictionary = {}
+func Scale_To(_behavior_data) -> void:
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	if target_nodes.is_empty():
+		Console.print_line("Scale_To: no valid target(s) found")
+		run_next_behavior(_behavior_data)
+		return
+
+	var scale_type  = str(get_action_field(actions, "scaleType", "Percentage"))
+	var duration    = float(get_action_field(actions, "duration", 0.0))
+	var ease_action = int(get_action_field(actions, "easeAction", 0))
+
+	var all_tweens: Array[Tween] = []
+
+	for node in target_nodes:
+		var node_key = node.get_instance_id()
+
+		if _active_scale_to_tweens.has(node_key):
+			var existing: Tween = _active_scale_to_tweens[node_key]
+			if is_instance_valid(existing) and existing.is_valid():
+				existing.kill()
+
+		# Unlike Scale (which ADDS a delta to current scale), Scale To sets
+		# an ABSOLUTE target scale — scaleX/scaleY here are the destination
+		# percentage/meters value, not an offset.
+		var target_scale: Vector2
+		if scale_type == "Meters":
+			var sx = float(get_action_field(actions, "scaleXMeters", 1.0))
+			var sy = float(get_action_field(actions, "scaleYMeters", 1.0))
+			target_scale = Vector2(sx / SCALE_METERS_DIVISOR, sy / SCALE_METERS_DIVISOR)
+		else:
+			var sx = float(get_action_field(actions, "scaleX", 100.0)) / 100.0
+			var sy = float(get_action_field(actions, "scaleY", 100.0)) / 100.0
+			target_scale = Vector2(sx, sy)
+
+		if duration <= 0.0:
+			node.scale = target_scale
+			continue
+
+		var tween = create_tween()
+		_active_scale_to_tweens[node_key] = tween
+
+		var ease_pair = _get_ease(ease_action)
+		tween.set_trans(ease_pair[0])
+		tween.set_ease(ease_pair[1])
+
+		tween.tween_property(node, "scale", target_scale, duration)
+
+		all_tweens.append(tween)
+
+	for tween in all_tweens:
+		await tween.finished
+
+	if not is_instance_valid(self):
+		return
+
+	for node in target_nodes:
+		var node_key = node.get_instance_id()
+		if _active_scale_to_tweens.get(node_key) in all_tweens:
+			_active_scale_to_tweens.erase(node_key)
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
 func Scale_v2_7(_behavior_data):
 	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
 		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
@@ -1863,3 +1938,124 @@ func Collided(_behavior_data):
 	my_component.collided_nodes_to_check[self].append(_behavior_data)
 
 	_set_behavior_status(_behavior_data["tag"], "done")
+
+# tag: D021356E-6331-48C4-A56F-399710705CE9
+func Get_Scale(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	var scale_x := 100.0
+	var scale_y := 100.0
+	var object_id := ""
+
+	if target_nodes.is_empty():
+		Console.print_line("Get_Scale: no valid target(s) found")
+	else:
+		# Multiple targets (e.g. via "groups") only have one output slot,
+		# same limitation as Camera_To_Object — report the first match.
+		var node = target_nodes[0]
+		scale_x = node.scale.x * 100.0
+		scale_y = node.scale.y * 100.0
+		object_id = str(check_value_key(actions["objectA"]))
+
+	var result := {
+		"scale_x": scale_x,
+		"scale_y": scale_y,
+		"objectA_ID": object_id
+	}
+
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: E0A65323-4E37-4893-92D5-FCC5BA8671EA
+func Multiply_Values(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+
+	var number_a = float(get_action_field(actions, "numberA", 0.0))
+	var number_b = float(get_action_field(actions, "numberB", 0.0))
+	var symbol = str(actions.get("symbol", "times"))
+
+	# "symbol" mirrors If's "condition" pattern — a string op selector on
+	# an otherwise generically-named behavior. Only "times" is confirmed
+	# from this JSON sample; other symbols are guessed from naming
+	# convention and may need correction against real Hyperpad data.
+	var final_value: float
+	match symbol:
+		"times":
+			final_value = number_a * number_b
+		"divide":
+			final_value = number_a / number_b if number_b != 0.0 else 0.0
+		"plus":
+			final_value = number_a + number_b
+		"minus":
+			final_value = number_a - number_b
+		_:
+			Console.print_line("Multiply_Values: unknown symbol '%s' — defaulting to multiply" % symbol)
+			final_value = number_a * number_b
+
+	# Output key is "final value" — the actions["final value"] field is the
+	# BehaviourInputField that looks like the declared output slot here
+	# (actions["value"] is empty in this JSON, unlike Combine Text where
+	# actions["value"] held the literal output key). Consumers link via
+	# valueKey: "final value" + controlledBy: this tag.
+	var result := {"final value": final_value}
+
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: 99143E1D-5448-4262-BA4E-A700E123BF8F
+func Shake_Camera_v1_24(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var cam = get_tree().get_first_node_in_group("HyperpadCamera") as Camera2D
+
+	if cam == null:
+		Console.print_line("Shake_Camera_v1_24: no HyperpadCamera found — skipping")
+		run_next_behavior(_behavior_data)
+		return
+
+	var amplitude_x = float(get_action_field(actions, "amplitudeX", 0.0))
+	var amplitude_y = float(get_action_field(actions, "amplitudeY", 0.0))
+	var duration = float(get_action_field(actions, "duration", 0.0))
+
+	# shake() on the camera itself owns interruption (killing/replacing
+	# any in-progress shake tween), so calling this again on the same or
+	# a different Shake Camera instance naturally interrupts the prior one.
+	await cam.shake(amplitude_x, amplitude_y, duration)
+
+	if not is_instance_valid(self):
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)

@@ -41,7 +41,8 @@ func _process(_delta: float) -> void:
 	_prof_elapsed += _delta
 	if _prof_elapsed >= _prof_interval:
 		_prof_elapsed = 0.0
-		_print_profile_report()
+
+		#_print_profile_report()
 
 func _print_profile_report() -> void:
 	print("=== PERF REPORT (last ~1s) ===")

@@ -103,6 +103,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Get Pixel
   - [ ] Get Socket Status
   - [x] Get Screen
+  - [x] Get Scale
   - [ ] Get Time
   - [ ] HTTP Request
   - [ ] HitPoint Test
@@ -118,6 +119,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
       - [x] none 
   - [ ] Load from File
   - [ ] Loop
+  - [x] Multiply Values
   - [ ] Math Expression
   - [ ] Math Function
   - [ ] Maximum
@@ -144,6 +146,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Round Number
   - [ ] Save to File
   - [x] Scale By
+  - [x] Scale To
   - [x] Screen Follow
   - [x] Screen To Object
   - [ ] Set Background
@@ -160,6 +163,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Set Visibility
   - [x] Set Z Order
   - [ ] Share
+  - [x] Shake Screen / Shake Camera v1_24
   - [x] Show Layer v1.26
   - [ ] Socket Event
   - [ ] Socket.io Client

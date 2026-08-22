@@ -14,6 +14,14 @@ var follow_y: bool = true
 var _last_target_position: Vector2 = Vector2.ZERO
 var _has_last_position: bool = false
 
+# ---------- SHAKE ----------------------------------------------------------
+# Shake is an additive offset applied on top of whatever global_position
+# ends up being from follow/tween logic, so it composes instead of
+# fighting other camera behaviors for ownership of global_position.
+
+var _shake_offset: Vector2 = Vector2.ZERO
+var _shake_tween: Tween = null
+
 func _ready() -> void:
 	if not is_in_group("HyperpadCamera"):
 		add_to_group("HyperpadCamera")
@@ -55,3 +63,46 @@ func _process(_delta: float) -> void:
 
 	global_position += movement_delta
 	_last_target_position = current_position
+
+## Shakes the camera with amplitude decaying linearly from
+## (amplitude_x, amplitude_y) down to 0 over `duration` seconds.
+## Interruptible: calling this again while a shake is in progress kills
+## the old shake (snapping its offset back out) and starts fresh.
+## Returns once the shake has fully decayed to 0.
+func shake(amplitude_x: float, amplitude_y: float, duration: float) -> void:
+	# Interrupt any in-progress shake and remove its offset immediately,
+	# so offsets from two overlapping shakes never stack/compound.
+	if is_instance_valid(_shake_tween) and _shake_tween.is_valid():
+		_shake_tween.kill()
+	global_position -= _shake_offset
+	_shake_offset = Vector2.ZERO
+
+	if duration <= 0.0 or (amplitude_x == 0.0 and amplitude_y == 0.0):
+		return
+
+	# Tween a single scalar 1.0 -> 0.0 representing the decaying envelope;
+	# each step we derive a new random offset scaled by that envelope and
+	# swap it in for the previous frame's offset. This gives "random
+	# jitter whose magnitude decays linearly to 0 over duration" without
+	# needing a custom _process loop here — matches the tween-driven style
+	# used by Move/Scale/Zoom_Camera elsewhere in this codebase.
+	var envelope := {"t": 1.0}
+	var tween = create_tween()
+	_shake_tween = tween
+	tween.tween_method(
+		func(t: float):
+			global_position -= _shake_offset
+			_shake_offset = Vector2(
+				randf_range(-amplitude_x, amplitude_x) * t,
+				randf_range(-amplitude_y, amplitude_y) * t
+			)
+			global_position += _shake_offset,
+		1.0, 0.0, duration
+	)
+
+	await tween.finished
+
+	if _shake_tween == tween:
+		_shake_tween = null
+		global_position -= _shake_offset
+		_shake_offset = Vector2.ZERO
