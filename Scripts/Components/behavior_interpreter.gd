@@ -172,7 +172,11 @@ func _process(_delta: float) -> void:
 			timers_to_remove.append(behavior)
 			continue
 
-		var wait_time = float(check_value_key(behavior["actions"]["waitTime"]))
+		var actions: Dictionary = behavior.get("actions", {})
+		# Same fix as Wait(): some tap exports omit "waitTime" entirely,
+		# and a raw actions["waitTime"] subscript throws instead of
+		# falling back. get_action_field() checks .has() first.
+		var wait_time = float(get_action_field(actions, "waitTime", 0.0))
 
 		if wait_time == 0:
 			run_next_behavior(behavior)
@@ -407,8 +411,19 @@ func Wait(_behavior_data) -> void:
 
 	_set_behavior_status(_behavior_data["tag"], "running")
 
-	var wait_amount = float(check_value_key(_behavior_data["actions"]["waitTime"]))
-	await get_tree().create_timer(wait_amount).timeout
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	# Some tap exports (older Hyperpad versions/behavior variants) omit
+	# "waitTime" entirely from a Wait behavior's actions - a raw
+	# actions["waitTime"] subscript throws "Invalid access to property or
+	# key" in that case. get_action_field() checks actions.has() first and
+	# falls back to a safe default (0.0 = don't wait) instead of crashing.
+	var wait_amount = float(get_action_field(actions, "waitTime", 0.0))
+
+	if wait_amount > 0.0:
+		await get_tree().create_timer(wait_amount).timeout
+
+	if not is_instance_valid(self):
+		return
 
 	if not GlobalBehaviorData.BehaviorStates.get(_behavior_data["tag"], true):
 		_set_behavior_status(_behavior_data["tag"], "done")
@@ -2305,3 +2320,195 @@ func Random_Number_v1_17(_behavior_data):
 	run_next_behavior(_behavior_data)
 
 	return result
+
+# tag: 855BC98A-79A6-4021-A826-38E118F9C22A
+func Get_Position(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data)
+
+	var position_x := 0.0
+	var position_y := 0.0
+	var object_id := ""
+
+	if target_nodes.is_empty():
+		Console.print_line("Get_Position: no valid target(s) found")
+	else:
+		# Multiple targets (e.g. via "groups") only have one output slot,
+		# same limitation as Get_Scale / Camera_To_Object — report the first match.
+		var node = target_nodes[0]
+		var screen_coordinates = bool(get_action_field(actions, "screenCoordinates", false))
+
+		if screen_coordinates:
+			var camera = get_viewport().get_camera_2d()
+			var screen_pos: Vector2
+			if camera != null:
+				screen_pos = (node.global_position - camera.global_position) / camera.zoom + get_viewport().get_visible_rect().size / 2.0
+			else:
+				screen_pos = node.global_position
+
+			var screen_height = get_viewport().get_visible_rect().size.y
+			position_x = screen_pos.x
+			position_y = screen_height - screen_pos.y
+		else:
+			# Hyperpad world units are Godot pixels / 30 (matches Move's
+			# offset = Vector2(move_x * 30, -move_y * 30) convention), with Y
+			# flipped so "up" is positive like Move_To_Point's world-space math.
+			var world_height = get_viewport().get_visible_rect().size.y
+			var camera = get_viewport().get_camera_2d()
+			if camera != null:
+				world_height = get_viewport().get_visible_rect().size.y * camera.zoom.y
+
+			position_x = node.global_position.x / 30.0
+			position_y = (world_height - node.global_position.y) / 30.0
+
+		object_id = str(check_value_key(actions["objectA"]))
+		var groups = _behavior_data.get("groups", [])
+		if groups != null and not groups.is_empty() and "id" in node:
+			object_id = str(node.id)
+
+	var result := {
+		"position_x": position_x,
+		"position_y": position_y,
+		"objectA_ID": object_id
+	}
+
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: 88693318-4A94-47BD-AB3F-36BAE6B042E5
+func Text_Bubble(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+
+	var object_id = str(check_value_key(actions["objectA"]))
+	var owner_node = get_node_from_UUID(object_id) as Node2D
+
+	if owner_node == null:
+		Console.print_line("Text_Bubble: objectA not found — skipping")
+		_finish_text_bubble(_behavior_data, object_id)
+		return
+
+	var text = str(get_action_field(actions, "text", ""))
+	var duration = float(get_action_field(actions, "duration", 2.0))
+	var width = float(get_action_field(actions, "width", 0.0))
+
+	var anchor_percent = Vector2(
+		float(get_action_field(actions, "relativeAnchorA_x", 50.0)),
+		float(get_action_field(actions, "relativeAnchorA_y", 50.0))
+	)
+	var pixel_offset = Vector2(
+		float(get_action_field(actions, "anchorA_x", 0.0)),
+		float(get_action_field(actions, "anchorA_y", 0.0))
+	)
+
+	var set_font = bool(get_action_field(actions, "setFont", false))
+	var font: Font = null
+	var font_color = Color.BLACK
+	var font_size = 24
+
+	if set_font:
+		var font_asset_id = str(get_action_field(actions, "font", ""))
+		font = _load_font_from_asset(font_asset_id)
+		font_color = Color(str(get_action_field(actions, "fontColor", "#000000FF")))
+		font_size = int(get_action_field(actions, "fontSize", 24))
+
+	var set_graphic = bool(get_action_field(actions, "setGraphic", false))
+	var bubble_graphic: Texture2D = null
+	var tail_graphic: Texture2D = null
+
+	if set_graphic:
+		bubble_graphic = _load_texture_from_asset(str(get_action_field(actions, "bubbleGraphic", "")))
+		tail_graphic = _load_texture_from_asset(str(get_action_field(actions, "tailGraphic", "")))
+
+	var margins = {
+		"left": float(get_action_field(actions, "leftMargin", 0.0)),
+		"top": float(get_action_field(actions, "topMargin", 0.0)),
+		"right": float(get_action_field(actions, "rightMargin", 0.0)),
+		"bottom": float(get_action_field(actions, "bottomMargin", 0.0)),
+	}
+
+	var bubble = EmulatorManager.TextBubbleScene.instantiate()
+
+	# setup() is async (awaits resize/duration/fade internally) and itself
+	# calls queue_free() when done. Text Bubble "Triggers on Completion", so
+	# we await setup() fully before advancing to run_next_behavior — this
+	# is the same completion-gated pattern as Play_Sound_v1_21 / Move.
+	await bubble.setup(
+		owner_node,
+		text,
+		duration,
+		width,
+		anchor_percent,
+		pixel_offset,
+		set_font,
+		font,
+		font_color,
+		font_size,
+		set_graphic,
+		bubble_graphic,
+		tail_graphic,
+		margins
+	)
+
+	if not is_instance_valid(self):
+		return
+
+	_finish_text_bubble(_behavior_data, object_id)
+
+func _finish_text_bubble(_behavior_data: Dictionary, object_id: String) -> void:
+	# Output key is the literal "objectA_ID" from actions["value"] in the
+	# JSON, matching the Hide_Graphic/Show_Graphic output-key pattern.
+	var result := {"objectA_ID": object_id}
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+## Resolves a font asset UUID to a loaded Font resource. Mirrors
+## Set_Graphic_v1_26's use of TapAssetExtractor.get_asset_user_path(), but
+## for font files instead of images.
+func _load_font_from_asset(asset_id: String) -> Font:
+	if asset_id == "":
+		return null
+	var full_path = TapAssetExtractor.get_asset_user_path(asset_id)
+	if full_path == "" or not FileAccess.file_exists(full_path):
+		Console.print_line("Text_Bubble: could not locate font asset '%s'" % asset_id)
+		return null
+	var font_file := FontFile.new()
+	var err := font_file.load_dynamic_font(full_path)
+	if err != OK:
+		Console.print_line("Text_Bubble: failed to load font '%s' (error %s)" % [full_path, err])
+		return null
+	return font_file
+## Resolves a graphic asset UUID to a loaded Texture2D, same pattern as
+## Set_Graphic_v1_26.
+func _load_texture_from_asset(asset_id: String) -> Texture2D:
+	if asset_id == "":
+		return null
+	var full_path = TapAssetExtractor.get_asset_user_path(asset_id)
+	if full_path == "":
+		return null
+	var image := Image.new()
+	var err := image.load(full_path)
+	if err != OK:
+		Console.print_line("Text_Bubble: failed to load graphic '%s' (error %s)" % [full_path, err])
+		return null
+	return ImageTexture.create_from_image(image)

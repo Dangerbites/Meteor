@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://cjjdh5w8720sf"]
+
+[ext_resource type="Script" uid="uid://bf0cpgawfwfp0" path="res://Scripts/text_bubble.gd" id="1_42ai3"]
+[ext_resource type="FontFile" uid="uid://cn6bqbsl0rvut" path="res://helvetica-255/Helvetica.ttf" id="1_f00g0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_plwxy"]
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+corner_detail = 5
+
+[node name="TextBubble" type="Node2D" unique_id=259247125]
+script = ExtResource("1_42ai3")
+padding_spaces = 2
+init_scale = Vector2(2, 2)
+
+[node name="tail" type="ColorRect" parent="." unique_id=175189074]
+unique_name_in_owner = true
+offset_top = -14.0
+offset_right = 10.0
+offset_bottom = -4.0
+rotation = 0.7853982
+
+[node name="text" type="RichTextLabel" parent="." unique_id=994447671]
+unique_name_in_owner = true
+offset_left = -22.0
+offset_top = -37.0
+offset_right = 22.0
+offset_bottom = -7.0
+theme_override_colors/default_color = Color(0, 0, 0, 1)
+theme_override_fonts/normal_font = ExtResource("1_f00g0")
+theme_override_styles/normal = SubResource("StyleBoxFlat_plwxy")
+text = "test"
+fit_content = true
+horizontal_alignment = 1
+vertical_alignment = 1

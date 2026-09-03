@@ -125,7 +125,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Get Objects By Tag
   - [ ] Get Physics Properties
   - [ ] Get Pixel
-  - [ ] Get Position
+  - [x] Get Position
   - [ ] Get Rotation
   - [ ] Get Rotational Velocity
   - [x] Get Screen
@@ -271,7 +271,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Swipe Left
   - [ ] Swipe Right
   - [ ] Swipe Up
-  - [ ] Text Bubble
+  - [x] Text Bubble
   - [ ] Text Length
   - [ ] Text Operation
   - [ ] Tilt Controlled

@@ -12,6 +12,7 @@ var TTFLabelObjectScene : PackedScene = preload("res://objects/ttf_label_object.
 var JoystickObjectScene : PackedScene = preload("res://objects/joystick_object.tscn")
 var HealthBarScene : PackedScene = preload("res://objects/health_bar_object.tscn")
 var LifeIndicatorObject : PackedScene = preload("res://objects/LifeIndicatorObject.tscn")
+var TextBubbleScene : PackedScene = preload("res://objects/text_bubble.tscn")
 
 var project_json := "game.json"
 var emulated_tap := "Iamafuckingarchitect.tap"
