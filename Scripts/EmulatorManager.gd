@@ -38,6 +38,23 @@ const TRACKED_PYTHON_SCRIPTS := [
 	"check_av.py",
 ]
 
+# --- Z-ORDER LAYERING -----------------------------------------------
+# Godot's z_index is a single flat integer space, absolutely clamped to
+# [-4096, 4096] by the engine once relative offsets are resolved. Layers
+# must always win over any in-layer object z_order, so we give each
+# layer a fixed-width "band" of that space (LAYER_Z_BAND) and every
+# object's z_order is clamped to fit entirely inside one band
+# (OBJECT_Z_CLAMP) before being applied. As long as
+# OBJECT_Z_CLAMP < LAYER_Z_BAND / 2, no object's z_order can ever push it
+# into a neighboring layer's band, no matter how extreme the tap's
+# authored z_order value is.
+#
+# hyperpad_object.gd reads LAYER_Z_BAND (via
+# EmulatorManager.LAYER_Z_BAND) to clamp its own z_index the same way -
+# keep these in sync if you change the band width.
+const LAYER_Z_BAND := 1000
+const OBJECT_Z_CLAMP := 400
+
 # Accumulated warning lines for this session - each failed check appends
 # one entry here instead of overwriting the label, so multiple problems
 # (missing Python, missing package, edited scripts) all show at once.
@@ -292,7 +309,16 @@ func _get_layer_container(layer_key: String, layers: Dictionary) -> Node2D:
 
 	container.add_to_group("hyperpadLayer")
 
-	container.z_index = -int(layer_info["z_order"])
+	# Each layer gets a dedicated band of the z_index space
+	# (LAYER_Z_BAND wide) instead of a raw 1-to-1 z_order value. Objects
+	# inside the layer (hyperpad_object.gd) clamp their own z_index to
+	# OBJECT_Z_CLAMP, which is well inside half a band, so no object's
+	# z_order can ever numerically outrank a different layer's band.
+	# Without this, a very negative/positive object z_index could sum
+	# past a neighboring layer's container z_index and render on the
+	# wrong side of it (e.g. an object at z -2 in a top layer showing
+	# below a z 1 object in a lower layer).
+	container.z_index = -int(layer_info["z_order"]) * LAYER_Z_BAND
 	container.z_as_relative = true
 
 	var parent_name = "GlobalUI" if layer_info["ui_layer"] else "Scene"

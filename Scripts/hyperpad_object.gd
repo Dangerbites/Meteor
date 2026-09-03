@@ -88,7 +88,16 @@ func _ready() -> void:
 
 	modulate = Color(object_data["gameobjectdata"]["tint"]["UIRed"], object_data["gameobjectdata"]["tint"]["UIGreen"], object_data["gameobjectdata"]["tint"]["UIBlue"], object_data["gameobjectdata"]["tint"]["UIAlpha"])
 
-	z_index = object_data["z_index"]
+	# Layers must always outrank in-layer object ordering. The parent
+	# layer container (EmulatorManager._get_layer_container) puts each
+	# layer in its own LAYER_Z_BAND-wide band of the z_index space, so we
+	# clamp this object's z_index to OBJECT_Z_CLAMP (comfortably inside
+	# half a band) before assigning it. z_as_relative defaults to true
+	# on Node2D, so this value is added to the layer container's
+	# z_index rather than replacing it - clamping keeps that sum from
+	# ever spilling into a neighboring layer's band, no matter how
+	# extreme the tap's authored z_index is.
+	z_index = clampi(int(object_data["z_index"]), -EmulatorManager.OBJECT_Z_CLAMP, EmulatorManager.OBJECT_Z_CLAMP)
 
 	# O(1) UUID -> Node lookup cache, so get_node_from_UUID doesn't need
 	# to linearly scan every HyperpadObject in the scene on every call -
