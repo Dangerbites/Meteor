@@ -18,13 +18,15 @@ input_pickable = true
 freeze = true
 script = ExtResource("1_1dato")
 
-[node name="CollisionDetectionComponent" parent="." unique_id=1827404627 instance=ExtResource("5_ehdme")]
-
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=2121270780 node_paths=PackedStringArray("collision")]
 scale = Vector2(0.49999997, 0.50000006)
 texture = SubResource("CompressedTexture2D_8skcp")
 script = ExtResource("2_drlfl")
 collision = NodePath("../CollisionShape2D")
+
+[node name="CollisionDetectionComponent" parent="." unique_id=1827404627 instance=ExtResource("5_ehdme")]
+
+[node name="CollisionOverride" parent="." unique_id=1603179530 instance=ExtResource("6_ehdme")]
 
 [node name="BehaviorInterpreter" parent="." unique_id=740618950 instance=ExtResource("4_8skcp")]
 
@@ -32,5 +34,3 @@ collision = NodePath("../CollisionShape2D")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1433276862]
 shape = SubResource("RectangleShape2D_t3dit")
-
-[node name="CollisionOverride" parent="." unique_id=1603179530 instance=ExtResource("6_ehdme")]

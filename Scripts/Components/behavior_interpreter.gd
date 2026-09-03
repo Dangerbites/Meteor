@@ -1709,6 +1709,11 @@ func Change_Label(_behavior_data):
 			label.add_theme_constant_override("shadow_offset_x", offset_x)
 			label.add_theme_constant_override("shadow_offset_y", offset_y)
 
+		if label.has_method("_sync_collision"):
+			# BMFont fit_content sizing is deferred, so re-sync next frame
+			# as well as immediately for TTF tight bounds.
+			label.call_deferred("_sync_collision")
+
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
 
@@ -1993,17 +1998,17 @@ func Multiply_Values(_behavior_data):
 
 	var number_a = float(get_action_field(actions, "numberA", 0.0))
 	var number_b = float(get_action_field(actions, "numberB", 0.0))
-	var symbol = str(actions.get("symbol", "times"))
+	var symbol = str(actions.get("symbol", "times")).strip_edges().to_lower()
 
 	# "symbol" mirrors If's "condition" pattern — a string op selector on
-	# an otherwise generically-named behavior. Only "times" is confirmed
-	# from this JSON sample; other symbols are guessed from naming
-	# convention and may need correction against real Hyperpad data.
+	# an otherwise generically-named behavior. Confirmed symbols from
+	# real taps: Subtract="minus", Divide="divided by", Multiply="times".
+	# Also handle aliases ("divide" vs "divided by") for robustness.
 	var final_value: float
 	match symbol:
 		"times":
 			final_value = number_a * number_b
-		"divide":
+		"divide", "divided by":
 			final_value = number_a / number_b if number_b != 0.0 else 0.0
 		"plus":
 			final_value = number_a + number_b
@@ -2059,3 +2064,244 @@ func Shake_Camera_v1_24(_behavior_data):
 
 	_set_behavior_status(_behavior_data["tag"], "done")
 	run_next_behavior(_behavior_data)
+
+# tag: 57739193-D157-4CD0-BC5B-A0E6047AD094
+func Hide_Graphic(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data, "objectA")
+
+	if target_nodes.is_empty():
+		Console.print_line("Hide_Graphic: no valid target(s) found")
+	else:
+		for node in target_nodes:
+			# Hide only affects visibility — physics/collision/touch keep running
+			# per spec: "still active, all behavior continue to run and objects
+			# can still collide with it. It will simply just not be visible."
+			node.visible = false
+
+	# Output: actions["value"] is the literal output key string "objectA_ID"
+	# (not a BehaviourInputField). Consumers link via valueKey="objectA_ID"
+	# + controlledBy=this tag and read output_store[tag]["objectA_ID"].
+	var object_id := ""
+	if actions.has("objectA"):
+		object_id = str(check_value_key(actions["objectA"]))
+		# When targeting via groups, check_value_key resolves the stored
+		# placeholder ID, not the actual matched nodes — prefer first
+		# resolved node's real id for consistency with Get_Scale.
+		var groups = _behavior_data.get("groups", [])
+		if groups != null and not groups.is_empty() and not target_nodes.is_empty():
+			if "id" in target_nodes[0]:
+				object_id = str(target_nodes[0].id)
+
+	var output_key = actions.get("value", "objectA_ID")
+	# Defensive: some exports wrap even "value" as a BehaviourInputField
+	if output_key is Dictionary:
+		output_key = output_key.get("value", "objectA_ID")
+	if not (output_key is String) or output_key == "":
+		output_key = "objectA_ID"
+
+	var result := {output_key: object_id}
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# Related: Show Graphic — inverse of Hide Graphic, makes object visible again.
+func Show_Graphic(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var target_nodes = get_target_nodes(_behavior_data, "objectA")
+
+	if target_nodes.is_empty():
+		Console.print_line("Show_Graphic: no valid target(s) found")
+	else:
+		for node in target_nodes:
+			node.visible = true
+
+	var object_id := ""
+	if actions.has("objectA"):
+		object_id = str(check_value_key(actions["objectA"]))
+		var groups2 = _behavior_data.get("groups", [])
+		if groups2 != null and not groups2.is_empty() and not target_nodes.is_empty():
+			if "id" in target_nodes[0]:
+				object_id = str(target_nodes[0].id)
+
+	var output_key = actions.get("value", "objectA_ID")
+	if output_key is Dictionary:
+		output_key = output_key.get("value", "objectA_ID")
+	if not (output_key is String) or output_key == "":
+		output_key = "objectA_ID"
+
+	var result := {output_key: object_id}
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: C6498ABF-99F0-40A2-B571-71E3066785C8
+func Subtract_Values(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	# Mirrors Multiply_Values pattern: numberA/numberB are BehaviourInputFields
+	# that may be chained (valueKey != $null -> read from output_store).
+	# Triggers immediately, outputs difference (numberA - numberB) as "final value".
+	var number_a = float(get_action_field(actions, "numberA", 0.0))
+	var number_b = float(get_action_field(actions, "numberB", 0.0))
+
+	var final_value: float = number_a - number_b
+
+	# Optional symbol field present in JSON (e.g. "minus") — keep parity with
+	# Multiply_Values which dispatches on symbol; for Subtract we honour it
+	# if present but default strictly to minus. Real tap uses "minus" for
+	# Subtract and "divided by" for Divide — handle both aliases.
+	if actions.has("symbol"):
+		var symbol = str(actions.get("symbol", "minus")).strip_edges().to_lower()
+		match symbol:
+			"minus":
+				final_value = number_a - number_b
+			"plus":
+				final_value = number_a + number_b
+			"times":
+				final_value = number_a * number_b
+			"divide", "divided by":
+				final_value = number_a / number_b if number_b != 0.0 else 0.0
+			_:
+				pass
+
+	var result := {"final value": final_value}
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: 01DA7CA5-3F06-475A-B826-7189EC7B6270
+func Divide_Values(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var number_a = float(get_action_field(actions, "numberA", 0.0))
+	var number_b = float(get_action_field(actions, "numberB", 0.0))
+
+	var final_value: float = number_a / number_b if number_b != 0.0 else 0.0
+
+	if actions.has("symbol"):
+		var symbol = str(actions.get("symbol", "divided by")).strip_edges().to_lower()
+		match symbol:
+			"divide", "divided by":
+				final_value = number_a / number_b if number_b != 0.0 else 0.0
+			"times":
+				final_value = number_a * number_b
+			"plus":
+				final_value = number_a + number_b
+			"minus":
+				final_value = number_a - number_b
+			_:
+				pass
+
+	var result := {"final value": final_value}
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result
+
+# tag: F0A62CF9-331F-46A1-A66D-CA352E67B0C9
+func Comment_v1_26(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+# tag: 1EC38B42-2943-42BF-8D6A-88D3A5D005CD
+func Random_Number_v1_17(_behavior_data):
+	if !GlobalBehaviorData.BehaviorStates.has(_behavior_data["tag"]):
+		GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] = _behavior_data["actions"]["active"]
+
+	if GlobalBehaviorData.BehaviorStates[_behavior_data["tag"]] == false:
+		return
+
+	_set_behavior_status(_behavior_data["tag"], "running")
+
+	var actions: Dictionary = _behavior_data.get("actions", {})
+	var raw_a = get_action_field(actions, "numberA", 0)
+	var raw_b = get_action_field(actions, "numberB", 0)
+	var a = float(raw_a)
+	var b = float(raw_b)
+
+	# Ensure range is ordered regardless of input order.
+	var min_val = min(a, b)
+	var max_val = max(a, b)
+
+	# Decimal detection: spec says if ANY input is decimal, output decimal.
+	# Check both raw string form (contains '.') and numeric fractional part.
+	var is_decimal := false
+	for v in [raw_a, raw_b]:
+		if v is float and v != floor(v):
+			is_decimal = true
+			break
+		if v is String and "." in v:
+			is_decimal = true
+			break
+	# Also check resolved floats for safety (chained "final value" may be 7.5 float)
+	if not is_decimal and (a != floor(a) or b != floor(b)):
+		is_decimal = true
+
+	var final_value
+	if is_decimal:
+		# randf_range is [min, max) in Godot; inclusive enough for gameplay.
+		final_value = randf_range(min_val, max_val)
+	else:
+		var min_i = int(floor(min_val))
+		var max_i = int(floor(max_val))
+		# randi_range is inclusive on both ends.
+		final_value = randi_range(min_i, max_i)
+		# Store as float-compatible number (int) but keep int type for downstream is_decimal checks.
+
+	var result := {"final value": final_value}
+	output_store[_behavior_data["tag"]] = result
+
+	_set_behavior_status(_behavior_data["tag"], "done")
+	run_next_behavior(_behavior_data)
+
+	return result

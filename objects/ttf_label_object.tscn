@@ -4,6 +4,8 @@
 [ext_resource type="Script" uid="uid://bifjktb11qkhj" path="res://Scripts/TTFlabel.gd" id="2_b1002"]
 [ext_resource type="PackedScene" uid="uid://hxrssf1kx1xa" path="res://objects/Components/touching_component.tscn" id="3_ywc4r"]
 [ext_resource type="PackedScene" uid="uid://bdj87m3v6iean" path="res://objects/Components/behavior_interpreter.tscn" id="4_v3buk"]
+[ext_resource type="PackedScene" uid="uid://4lhifltxbsow" path="res://objects/Components/collision_detection_component.tscn" id="5_qw7an"]
+[ext_resource type="PackedScene" uid="uid://bwbhuaoo6rsxq" path="res://objects/Components/collision_override.tscn" id="6_1xiue"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_plwxy"]
 
@@ -16,6 +18,7 @@ offset_left = -27.0
 offset_top = -12.0
 offset_right = 27.0
 offset_bottom = 11.0
+mouse_filter = 2
 text = "EMPTY"
 horizontal_alignment = 1
 script = ExtResource("2_b1002")
@@ -26,3 +29,7 @@ shape = SubResource("RectangleShape2D_plwxy")
 [node name="touchingComponent" parent="." unique_id=1357324686 instance=ExtResource("3_ywc4r")]
 
 [node name="BehaviorInterpreter" parent="." unique_id=740618950 instance=ExtResource("4_v3buk")]
+
+[node name="CollisionDetectionComponent" parent="." unique_id=1827404627 instance=ExtResource("5_qw7an")]
+
+[node name="CollisionOverride" parent="." unique_id=1603179530 instance=ExtResource("6_1xiue")]

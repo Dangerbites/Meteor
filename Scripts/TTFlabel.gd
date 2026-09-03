@@ -62,6 +62,7 @@ func _ready() -> void:
 		global_position += Vector2(28, 28)
 
 	global_position.y -= 10
+	call_deferred("_sync_collision")
 
 
 func _apply_bmfont_position() -> void:
@@ -73,6 +74,149 @@ func _apply_bmfont_position() -> void:
 	# connection may be needed instead of a single deferred call.
 	apply_anchor_offset(size)
 	global_position += Vector2(28, -18)
+	call_deferred("_sync_collision")
+
+# --- Collision: exact unique shape matching the rendered text ---------------
+func _sync_collision() -> void:
+	# hyperPad exports no reliable collision_points for labels (Default /
+	# empty) and the .tscn's RectangleShape2D is a single shared SubResource
+	# (0×0). Mutating it would resize every label at once. This builds a
+	# unique per-instance RectangleShape2D sized to the exact rendered text
+	# (tight glyph bounds) and positions it at the visual center of that
+	# tight rect inside the container, so each label gets an independent,
+	# pixel-exact hitbox. Called deferred from _ready and from
+	# Change_Label for live updates.
+	var parent = get_parent() as Node2D
+	if parent == null:
+		return
+	var coll = parent.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if coll == null:
+		return
+	# BMFont fit_content sizing is deferred – if size is still zero wait a frame.
+	if size == Vector2.ZERO:
+		call_deferred("_sync_collision")
+		return
+	# Container size is the Control's fixed size (TTF: dimensions box) or
+	# the fit_content tight size (BMFont). Tight glyph size is preferred
+	# so "Hi" in a 256×64 box doesn't give a 256×64 collider.
+	var container_size: Vector2 = size
+	var tight_size: Vector2 = container_size
+	var font = get_theme_font("normal_font")
+	if font != null and text != "":
+		var fs = 32
+		if has_theme_font_size("normal_font_size"):
+			fs = get_theme_font_size("normal_font_size")
+		elif parent.object_data != null and parent.object_data.has("gameobjectdata"):
+			var gd = parent.object_data["gameobjectdata"]
+			if gd.has("fontSize"):
+				fs = int(gd["fontSize"])
+		var t = font.get_string_size(text, horizontal_alignment, -1, fs)
+		if t.x > 0 and t.y > 0:
+			tight_size = t
+			if text.contains("\n"):
+				var lines = text.split("\n")
+				var max_w := 0.0
+				for l in lines:
+					var w = font.get_string_size(l, horizontal_alignment, -1, fs).x
+					max_w = max(max_w, w)
+				tight_size.x = max_w
+				# RichTextLabel line spacing ~1.2× font size; prefer content height if larger.
+				tight_size.y = fs * lines.size() * 1.2
+				var ch = get_content_height()
+				if ch > tight_size.y:
+					tight_size.y = ch
+			# Clamp tight to container if tighter would exceed container due to empty metrics edge.
+			# Otherwise tight is exact glyph bounds.
+		else:
+			tight_size = container_size
+
+	var box_size: Vector2 = tight_size
+	# Unique per-instance shape – never mutate the shared .tscn SubResource.
+	# Bake handling: hyperpad_object.gd bakes Dynamic scale into children and
+	# resets parent scale to ONE. To keep world size exact, local shape must
+	# be box_size * orig_scale / parent_scale so world = tight * orig_scale.
+	var orig_scale := Vector2.ONE
+	if parent.object_data != null and parent.object_data.has("scale"):
+		var sd = parent.object_data["scale"]
+		if sd is Array and sd.size() == 2:
+			orig_scale = Vector2(float(sd[0]), float(sd[1]))
+		elif sd is Vector2:
+			orig_scale = sd
+	var parent_gs: Vector2 = parent.scale
+	if parent_gs == Vector2.ZERO:
+		parent_gs = Vector2.ONE
+	if parent_gs.x == 0:
+		parent_gs.x = 1
+	if parent_gs.y == 0:
+		parent_gs.y = 1
+	var local_size := Vector2(box_size.x * orig_scale.x / parent_gs.x, box_size.y * orig_scale.y / parent_gs.y)
+	# Guard against degenerate zero from empty text.
+	if local_size.x < 1.0:
+		local_size.x = 1.0
+	if local_size.y < 1.0:
+		local_size.y = 1.0
+	var new_shape := RectangleShape2D.new()
+	new_shape.size = local_size
+	new_shape.resource_local_to_scene = true
+	coll.shape = new_shape
+
+	# Position the collider at the tight text's visual center in parent-local space.
+	# Tight rect is offset inside container by alignment (left/center/right) and
+	# vertically centered. `position` is the Control's local top-left (already
+	# includes anchor + 28px fudge offsets baked or not).
+	var align_factor := 0.5
+	match horizontal_alignment:
+		HORIZONTAL_ALIGNMENT_LEFT:
+			align_factor = 0.0
+		HORIZONTAL_ALIGNMENT_CENTER:
+			align_factor = 0.5
+		HORIZONTAL_ALIGNMENT_RIGHT:
+			align_factor = 1.0
+		_:
+			align_factor = 0.5
+
+	# If position is still zero (parent bake hasn't run yet, Control uses
+	# offset_* not position), fall back to anchor-derived placement.
+	var top_left_local: Vector2
+	if position != Vector2.ZERO:
+		top_left_local = position
+	else:
+		var anchor = Vector2(0.5, 0.5)
+		if parent.object_data != null and parent.object_data.has("anchor"):
+			anchor = Vector2(parent.object_data["anchor"][0], parent.object_data["anchor"][1])
+		top_left_local = Vector2(-anchor.x * container_size.x, (anchor.y - 1.0) * container_size.y)
+		if BMFont:
+			top_left_local += Vector2(5, 22)
+			# _apply_bmfont_position adds (28,-18) after anchor, already included via deferred size,
+			# but if we fallback early we must add it.
+			top_left_local += Vector2(28, -18)
+		else:
+			top_left_local += Vector2(28, 28)
+			top_left_local.y -= 10
+
+	# Vertical placement: hyperPad `verticalAlignment` 0=Top,1=Center,2=Bottom (all sample labels 0=top).
+	# Previous 0.5 (center) put the tight hitbox ~14px underneath the glyphs.
+	var v_align_factor := 0.0
+	if parent.object_data != null and parent.object_data.has("gameobjectdata"):
+		var gd_v = parent.object_data["gameobjectdata"]
+		if gd_v.has("verticalAlignment"):
+			match int(gd_v["verticalAlignment"]):
+				0:
+					v_align_factor = 0.0
+				1:
+					v_align_factor = 0.5
+				2:
+					v_align_factor = 1.0
+				_:
+					v_align_factor = 0.0
+	var offset_in_container = Vector2((container_size.x - box_size.x) * align_factor, (container_size.y - box_size.y) * v_align_factor)
+	# Control's `scale` (baked for Dynamic) scales the offset and half-size in local space.
+	var center_local = top_left_local + (offset_in_container + box_size * 0.5) * scale
+	coll.position = center_local
+	# Ensure the node's own scale doesn't double-scale the shape; shape size is
+	# already in local units, and parent's global scale will be applied at
+	# physics time. Reset any baked node scale on the shape itself.
+	coll.scale = Vector2.ONE
 
 
 # Cocos2d anchorPoint correction, same model as the Sprite2D version:

@@ -15,6 +15,7 @@ script = ExtResource("1_cw2il")
 [node name="TextureProgressBar" type="TextureProgressBar" parent="." unique_id=132603976]
 offset_right = 128.0
 offset_bottom = 128.0
+mouse_filter = 2
 texture_under = ExtResource("2_d8wih")
 texture_progress = ExtResource("2_kroe0")
 script = ExtResource("3_asshg")

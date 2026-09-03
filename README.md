@@ -47,7 +47,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] LifeObjects
   - [ ] HelathBars
   - [ ] Joystick
-  - [ ] Labels
+  - [x] Labels
 - [ ] Behaviors
   - [ ] Active State
   - [x] Add To Score
@@ -76,7 +76,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Clipboard
   - [ ] Close Overlay
   - [x] Combine Text
-  - [ ] Comment
+  - [x] Comment
   - [ ] Connect to Socket
   - [x] Collided / Started Colliding
   - [x] Collision Event
@@ -135,7 +135,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Get Time
   - [ ] Get Velocity
   - [ ] Get Z Order
-  - [ ] Hide Graphic
+  - [x] Hide Graphic
   - [ ] Hit by Bullet
   - [ ] HitPoint Test
   - [ ] HTTP Request
@@ -170,9 +170,9 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Make Wall
   - [x] Multiply Values
   - [ ] Add Values
-  - [ ] Divide Values
+  - [x] Divide Values (needs testing)
   - [ ] Modulus
-  - [ ] Subtract Values
+  - [x] Subtract Values (needs testing)
   - [ ] Square Root
   - [ ] Math Expression
   - [ ] Math Function
@@ -201,7 +201,7 @@ Meteor is a Hyperpad .tap player similar to the [Hyperpad Hub Player](https://ap
   - [ ] Preload Scene
   - [ ] Propel Object
   - [ ] Quit Project
-  - [ ] Random Number
+  - [x] Random Number
   - [ ] Raycast Test
   - [ ] Receive Message
   - [x] Receive Message v1.19
